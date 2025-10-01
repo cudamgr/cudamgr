@@ -1,36 +1,43 @@
 use serde::{Deserialize, Serialize};
 
-/// GPU information structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GpuInfo {
     pub name: String,
-    pub memory_mb: u64,
-    pub compute_capability: (u32, u32),
+    pub vendor: GpuVendor,
+    pub memory_mb: Option<u64>,
+    pub compute_capability: Option<(u32, u32)>,
     pub driver_version: Option<String>,
-    pub cuda_version: Option<String>,
+    pub pci_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum GpuVendor {
+    Nvidia,
+    Amd,
+    Intel,
+    Unknown(String),
 }
 
 impl GpuInfo {
-    /// Create a new GpuInfo instance
-    pub fn new(
-        name: String,
-        memory_mb: u64,
-        compute_capability: (u32, u32),
-        driver_version: Option<String>,
-        cuda_version: Option<String>,
-    ) -> Self {
+    pub fn new(name: String, vendor: GpuVendor) -> Self {
         Self {
             name,
-            memory_mb,
-            compute_capability,
-            driver_version,
-            cuda_version,
+            vendor,
+            memory_mb: None,
+            compute_capability: None,
+            driver_version: None,
+            pci_id: None,
         }
     }
 
-    /// Check if GPU supports the given CUDA compute capability
+    pub fn is_cuda_compatible(&self) -> bool {
+        matches!(self.vendor, GpuVendor::Nvidia) && self.compute_capability.is_some()
+    }
+
     pub fn supports_compute_capability(&self, required: (u32, u32)) -> bool {
-        self.compute_capability.0 > required.0 || 
-        (self.compute_capability.0 == required.0 && self.compute_capability.1 >= required.1)
+        match self.compute_capability {
+            Some(cap) => cap.0 > required.0 || (cap.0 == required.0 && cap.1 >= required.1),
+            None => false,
+        }
     }
 }

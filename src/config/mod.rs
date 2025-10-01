@@ -2,6 +2,12 @@ pub mod env;
 pub mod path;
 pub mod symlink;
 pub mod shell;
+pub mod types;
+
+pub use types::*;
+
+#[cfg(test)]
+mod tests;
 
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};

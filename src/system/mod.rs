@@ -4,6 +4,17 @@ pub mod compiler;
 pub mod distro;
 pub mod storage;
 pub mod security;
+pub mod cuda;
+
+pub use cuda::*;
+pub use distro::*;
+pub use gpu::*;
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod platform_tests;
 
 use serde::{Deserialize, Serialize};
 use crate::error::{SystemError, CudaMgrResult};
