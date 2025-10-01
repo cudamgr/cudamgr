@@ -32,7 +32,7 @@ cargo run -- install --help
 
 | Command | Description | Status |
 |---------|-------------|--------|
-| `doctor` | Check system compatibility for CUDA | ✅ Ready |
+| `doctor` | Check system compatibility for CUDA | 🚧 Coming Soon |
 | `install <version>` | Install a specific CUDA version | 🚧 Coming Soon |
 | `use <version>` | Switch to a CUDA version | 🚧 Coming Soon |
 | `list` | List installed and available versions | 🚧 Coming Soon |
