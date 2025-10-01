@@ -2,6 +2,9 @@ pub mod commands;
 pub mod output;
 pub mod interactive;
 
+#[cfg(test)]
+mod tests;
+
 use clap::Parser;
 use crate::error::CudaMgrResult;
 

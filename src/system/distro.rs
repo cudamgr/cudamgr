@@ -8,7 +8,7 @@ pub enum OsType {
 }
 
 /// Linux distribution variants
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum LinuxDistro {
     Ubuntu(String),
     Debian(String),

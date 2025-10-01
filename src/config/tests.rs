@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::types::*;
+    use crate::config::types::*;
     use std::path::PathBuf;
 
     #[test]

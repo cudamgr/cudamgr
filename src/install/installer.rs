@@ -1,4 +1,3 @@
-use std::path::Path;
 use crate::error::{InstallError, CudaMgrResult};
 use crate::install::InstallationPlan;
 

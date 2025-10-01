@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod platform_tests {
-    use super::distro::*;
+    use crate::system::distro::*;
 
     #[test]
     fn test_os_release_parsing() {
