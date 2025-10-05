@@ -98,14 +98,20 @@ impl DistroInfo {
     fn detect_linux() -> crate::error::CudaMgrResult<Self> {
         use std::fs;
         
+        let kernel_version = Self::detect_kernel_version();
+        
         // Try /etc/os-release first
         if let Ok(content) = fs::read_to_string("/etc/os-release") {
-            return Self::parse_os_release(&content);
+            let mut distro = Self::parse_os_release(&content)?;
+            distro.kernel_version = kernel_version;
+            return Ok(distro);
         }
         
         // Fallback to /etc/lsb-release
         if let Ok(content) = fs::read_to_string("/etc/lsb-release") {
-            return Self::parse_lsb_release(&content);
+            let mut distro = Self::parse_lsb_release(&content)?;
+            distro.kernel_version = kernel_version;
+            return Ok(distro);
         }
         
         // Last resort: generic Linux
@@ -113,7 +119,7 @@ impl DistroInfo {
             OsType::Linux(LinuxDistro::Generic("unknown".to_string())),
             "Linux".to_string(),
             "unknown".to_string(),
-            None,
+            kernel_version,
             PackageManager::Unknown,
         ))
     }
@@ -190,5 +196,33 @@ impl DistroInfo {
             None,
             PackageManager::Unknown,
         ))
+    }
+
+    /// Detect kernel version
+    #[cfg(target_os = "linux")]
+    fn detect_kernel_version() -> Option<String> {
+        use std::process::Command;
+        
+        Command::new("uname")
+            .arg("-r")
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .and_then(|output| String::from_utf8(output.stdout).ok())
+            .map(|version| version.trim().to_string())
+            .filter(|version| !version.is_empty())
+    }
+
+    #[cfg(target_os = "windows")]
+    fn detect_kernel_version() -> Option<String> {
+        use std::process::Command;
+        
+        Command::new("ver")
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .and_then(|output| String::from_utf8(output.stdout).ok())
+            .map(|version| version.trim().to_string())
+            .filter(|version| !version.is_empty())
     }
 }

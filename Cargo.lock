@@ -269,6 +269,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "libc",
  "reqwest",
  "serde",
  "serde_json",

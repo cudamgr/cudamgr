@@ -33,8 +33,29 @@ impl GpuInfo {
         }
     }
 
+    /// Detect GPU information using the default detector
+    pub fn detect() -> CudaMgrResult<Option<Self>> {
+        let detector = DefaultGpuDetector::new();
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| SystemError::GpuDetection(format!("Failed to create runtime: {}", e)))?;
+        
+        let gpus = rt.block_on(detector.detect_gpus())?;
+        
+        // Return the first CUDA-compatible GPU, or the first GPU if none are CUDA-compatible
+        let cuda_gpu = gpus.iter().find(|gpu| gpu.is_cuda_compatible()).cloned();
+        if cuda_gpu.is_some() {
+            return Ok(cuda_gpu);
+        }
+        
+        Ok(gpus.into_iter().next())
+    }
+
     pub fn is_cuda_compatible(&self) -> bool {
         matches!(self.vendor, GpuVendor::Nvidia) && self.compute_capability.is_some()
+    }
+
+    pub fn supports_cuda(&self) -> bool {
+        self.is_cuda_compatible()
     }
 
     pub fn supports_compute_capability(&self, required: (u32, u32)) -> bool {
@@ -369,7 +390,7 @@ impl GpuDetector for DefaultGpuDetector {
 [cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+
 
     #[test]
     fn test_gpu_info_creation() {
