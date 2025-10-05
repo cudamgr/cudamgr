@@ -122,7 +122,6 @@ cargo run -- logs --lines 0
 ## 📖 Documentation
 
 - **[DEVELOPER.md](DEVELOPER.md)** - Technical details, architecture, and development guide
-- **[.kiro/specs/cudamgr/](/.kiro/specs/cudamgr/)** - Detailed specifications and requirements
 
 ## 🤝 Contributing
 
