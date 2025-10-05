@@ -201,10 +201,10 @@ impl CompilerInfo {
     /// Check if GCC version is compatible with CUDA
     pub fn is_gcc_compatible(version: &str) -> bool {
         if let Ok(major) = version.split('.').next().unwrap_or("0").parse::<u32>() {
-            // CUDA 12.x supports GCC up to version 15.x
+            // CUDA 12.x supports GCC up to version 12.x
             // CUDA 11.x supports GCC up to version 11.x
-            // We'll be conservative and support GCC 5.x through 15.x
-            major >= 5 && major <= 15
+            // We'll be conservative and support GCC 5.x through 12.x
+            major >= 5 && major <= 12
         } else {
             false
         }
