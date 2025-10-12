@@ -209,12 +209,124 @@ impl DoctorHandler {
 #[async_trait]
 impl CommandHandler for DoctorHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
-        tracing::info!("Running system doctor with verbose: {}", self.args.verbose);
-        OutputFormatter::info("Running system compatibility check...");
+        use crate::system::SystemReportGenerator;
         
-        // TODO: Implement actual doctor functionality
-        OutputFormatter::warning("Doctor command implementation pending");
-        Err(CudaMgrError::Cli("Doctor command not yet implemented".to_string()))
+        tracing::info!("Running system doctor with verbose: {}", self.args.verbose);
+        OutputFormatter::info("Running comprehensive system compatibility check...");
+        
+        // Generate comprehensive system report
+        let report = SystemReportGenerator::generate_report().await?;
+        
+        // Display the report
+        if self.args.verbose {
+            // In verbose mode, show the full report
+            println!("{}", report);
+        } else {
+            // In normal mode, show a summary
+            Self::display_summary(&report);
+        }
+        
+        // Return success/failure based on compatibility status
+        match report.compatibility_status {
+            crate::system::CompatibilityStatus::Compatible => {
+                OutputFormatter::success("System is compatible with CUDA installation");
+                Ok(())
+            }
+            crate::system::CompatibilityStatus::CompatibleWithWarnings => {
+                OutputFormatter::warning("System is compatible but has warnings");
+                Ok(())
+            }
+            crate::system::CompatibilityStatus::Incompatible => {
+                OutputFormatter::error("System is not compatible with CUDA installation");
+                Err(CudaMgrError::System(crate::error::SystemError::Incompatible(
+                    "System compatibility check failed".to_string()
+                )))
+            }
+            crate::system::CompatibilityStatus::Unknown => {
+                OutputFormatter::warning("System compatibility could not be determined");
+                Ok(())
+            }
+        }
+    }
+}
+
+impl DoctorHandler {
+    /// Display a summary of the system report
+    fn display_summary(report: &crate::system::SystemReport) {
+        println!("=== CUDA System Compatibility Summary ===\n");
+        
+        // Overall status
+        println!("Status: {}\n", report.compatibility_status);
+        
+        // Key system info
+        println!("System Information:");
+        println!("  OS: {} {}", report.system_info.distro.name, report.system_info.distro.version);
+        
+        if let Some(gpu) = &report.system_info.gpu {
+            if let Some((major, minor)) = gpu.compute_capability {
+                println!("  GPU: {} (Compute {}.{})", gpu.name, major, minor);
+            } else {
+                println!("  GPU: {}", gpu.name);
+            }
+        } else {
+            println!("  GPU: ❌ Not detected");
+        }
+        
+        if let Some(driver) = &report.system_info.driver {
+            println!("  Driver: ✅ NVIDIA {}", driver.version);
+        } else {
+            println!("  Driver: ❌ Not detected");
+        }
+        
+        if let Some(compiler) = &report.system_info.compiler {
+            println!("  Compiler: {} {} {}", 
+                if compiler.is_compatible { "✅" } else { "⚠️" },
+                compiler.name, 
+                compiler.version);
+        } else {
+            println!("  Compiler: ❌ Not detected");
+        }
+        
+        println!("  Storage: {} GB available", report.system_info.storage.available_space_gb);
+        println!("  Admin: {}", if report.system_info.security.has_admin_privileges { "✅" } else { "❌" });
+        
+        // CUDA installations
+        if !report.cuda_detection.installations.is_empty() {
+            println!("\nExisting CUDA Installations:");
+            for installation in &report.cuda_detection.installations {
+                println!("  {} at {}", installation.version, installation.install_path.display());
+            }
+        }
+        
+        // Show critical errors
+        if !report.errors.is_empty() {
+            println!("\nCritical Issues:");
+            for error in &report.errors {
+                println!("  ❌ {}", error);
+            }
+        }
+        
+        // Show warnings
+        if !report.warnings.is_empty() {
+            println!("\nWarnings:");
+            for warning in &report.warnings {
+                println!("  ⚠️  {}", warning);
+            }
+        }
+        
+        // Show key recommendations
+        if !report.recommendations.is_empty() {
+            println!("\nNext Steps:");
+            for (i, recommendation) in report.recommendations.iter().take(3).enumerate() {
+                println!("  {}. {}", i + 1, recommendation);
+            }
+            if report.recommendations.len() > 3 {
+                println!("  ... and {} more (use --verbose for full details)", 
+                    report.recommendations.len() - 3);
+            }
+        }
+        
+        println!("\nRun 'cudamgr doctor --verbose' for detailed information.");
     }
 }
 

@@ -48,6 +48,21 @@ pub enum SystemError {
     
     #[error("Compatibility check failed: {0}")]
     CompatibilityCheck(String),
+    
+    #[error("System is incompatible: {0}")]
+    Incompatible(String),
+    
+    #[error("Command execution failed: {0}")]
+    CommandExecution(String),
+    
+    #[error("Parse error: {0}")]
+    ParseError(String),
+    
+    #[error("Unsupported platform: {0}")]
+    UnsupportedPlatform(String),
+    
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 /// Installation-related errors

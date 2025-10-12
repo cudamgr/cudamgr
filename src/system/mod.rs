@@ -5,6 +5,7 @@ pub mod distro;
 pub mod storage;
 pub mod security;
 pub mod cuda;
+pub mod report;
 
 pub use cuda::*;
 pub use distro::*;
@@ -13,6 +14,7 @@ pub use driver::*;
 pub use compiler::*;
 pub use storage::*;
 pub use security::*;
+pub use report::*;
 
 #[cfg(test)]
 mod tests;

@@ -36,10 +36,9 @@ impl GpuInfo {
     /// Detect GPU information using the default detector
     pub fn detect() -> CudaMgrResult<Option<Self>> {
         let detector = DefaultGpuDetector::new();
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| SystemError::GpuDetection(format!("Failed to create runtime: {}", e)))?;
         
-        let gpus = rt.block_on(detector.detect_gpus())?;
+        // Use synchronous detection to avoid runtime conflicts
+        let gpus = detector.detect_gpus_sync()?;
         
         // Return the first CUDA-compatible GPU, or the first GPU if none are CUDA-compatible
         let cuda_gpu = gpus.iter().find(|gpu| gpu.is_cuda_compatible()).cloned();
@@ -78,6 +77,116 @@ pub struct DefaultGpuDetector;
 impl DefaultGpuDetector {
     pub fn new() -> Self {
         Self
+    }
+
+    /// Synchronous GPU detection to avoid runtime conflicts
+    pub fn detect_gpus_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
+        // Try nvidia-smi first for NVIDIA GPUs
+        if let Ok(nvidia_gpus) = self.detect_nvidia_smi_sync() {
+            if !nvidia_gpus.is_empty() {
+                return Ok(nvidia_gpus);
+            }
+        }
+
+        // Fall back to platform-specific detection
+        #[cfg(target_os = "windows")]
+        {
+            self.detect_windows_wmic_sync()
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.detect_lspci_sync()
+        }
+    }
+
+    /// Fallback for non-Windows platforms when lspci is not available
+    #[cfg(not(target_os = "windows"))]
+    pub fn detect_lspci_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
+        // If lspci fails, return empty list rather than error
+        match std::process::Command::new("lspci").args(&["-nn"]).output() {
+            Ok(output) if output.status.success() => {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                let mut gpus = Vec::new();
+
+                for line in output_str.lines() {
+                    if line.to_lowercase().contains("vga") || line.to_lowercase().contains("3d") {
+                        // Parse lspci output format: "00:02.0 VGA compatible controller: Intel Corporation ..."
+                        let parts: Vec<&str> = line.split(':').collect();
+                        if parts.len() >= 3 {
+                            let pci_id = Some(format!("{}:{}", parts[0], parts[1].split_whitespace().next().unwrap_or("")));
+                            
+                            // Extract vendor and device name
+                            let description = parts[2..].join(":");
+                            let (vendor, name) = Self::parse_gpu_description(&description);
+                            
+                            let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
+                                self.get_compute_capability_sync(&name)
+                            } else {
+                                None
+                            };
+
+                            let gpu = GpuInfo {
+                                name: name.to_string(),
+                                vendor,
+                                memory_mb: Some(0), // lspci doesn't provide memory info easily
+                                driver_version: None,
+                                compute_capability,
+                                pci_id,
+                            };
+                            gpus.push(gpu);
+                        }
+                    }
+                }
+                Ok(gpus)
+            }
+            _ => {
+                // Return empty list if lspci is not available or fails
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Detect NVIDIA GPUs using nvidia-smi (synchronous version)
+    pub fn detect_nvidia_smi_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
+        let output = std::process::Command::new("nvidia-smi")
+            .args(&["--query-gpu=name,memory.total,driver_version,pci.bus_id", "--format=csv,noheader,nounits"])
+            .output()
+            .map_err(|e| SystemError::GpuDetection(format!("Failed to run nvidia-smi: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(SystemError::GpuDetection("nvidia-smi command failed".to_string()).into());
+        }
+
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut gpus = Vec::new();
+
+        for line in output_str.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
+            if parts.len() >= 4 {
+                let name = parts[0].to_string();
+                let memory_mb = parts[1].parse::<u64>().unwrap_or(0);
+                let driver_version = Some(parts[2].to_string());
+                let pci_id = Some(parts[3].to_string());
+
+                let compute_capability = self.get_compute_capability_sync(&name);
+
+                let gpu = GpuInfo {
+                    name,
+                    vendor: GpuVendor::Nvidia,
+                    memory_mb: Some(memory_mb),
+                    driver_version,
+                    compute_capability,
+                    pci_id,
+                };
+                gpus.push(gpu);
+            }
+        }
+
+        Ok(gpus)
     }
 
     /// Detect NVIDIA GPUs using nvidia-smi
@@ -133,6 +242,8 @@ impl DefaultGpuDetector {
             }
         }
     }
+
+
 
     /// Detect GPUs using lspci on Linux
     async fn detect_lspci(&self) -> CudaMgrResult<Vec<GpuInfo>> {
@@ -227,6 +338,48 @@ impl DefaultGpuDetector {
         })
     }
 
+    /// Parse GPU description from lspci output
+    fn parse_gpu_description(description: &str) -> (GpuVendor, &str) {
+        let desc_lower = description.to_lowercase();
+        
+        let vendor = if desc_lower.contains("nvidia") {
+            GpuVendor::Nvidia
+        } else if desc_lower.contains("amd") || desc_lower.contains("radeon") {
+            GpuVendor::Amd
+        } else if desc_lower.contains("intel") {
+            GpuVendor::Intel
+        } else {
+            GpuVendor::Unknown("Unknown".to_string())
+        };
+        
+        // Extract the GPU name (everything after the first colon and space)
+        let name = description.trim_start_matches(|c: char| c != ':')
+            .trim_start_matches(':')
+            .trim();
+        
+        (vendor, name)
+    }
+
+    /// Get compute capability for NVIDIA GPU based on name (synchronous version)
+    fn get_compute_capability_sync(&self, gpu_name: &str) -> Option<(u32, u32)> {
+        // This is a simplified mapping - in a real implementation, you'd want a more comprehensive database
+        let capability_map = self.get_compute_capability_map();
+        
+        // Try exact match first
+        if let Some(&capability) = capability_map.get(gpu_name) {
+            return Some(capability);
+        }
+        
+        // Try partial matches for common patterns
+        for (pattern, &capability) in &capability_map {
+            if gpu_name.contains(pattern) || pattern.contains(gpu_name) {
+                return Some(capability);
+            }
+        }
+        
+        None
+    }
+
     /// Get compute capability for NVIDIA GPU based on name
     async fn get_compute_capability(&self, gpu_name: &str) -> Option<(u32, u32)> {
         // This is a simplified mapping - in a real implementation, you'd want a more comprehensive database
@@ -280,6 +433,67 @@ impl DefaultGpuDetector {
         map.insert("quadro rtx", (7, 5));
         
         map
+    }
+
+    /// Detect GPUs on Windows using wmic (synchronous version)
+    #[cfg(target_os = "windows")]
+    pub fn detect_windows_wmic_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
+        let output = std::process::Command::new("wmic")
+            .args(&["path", "win32_VideoController", "get", "name,adapterram,driverversion", "/format:csv"])
+            .output()
+            .map_err(|e| SystemError::GpuDetection(format!("Failed to run wmic: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(SystemError::GpuDetection("wmic command failed".to_string()).into());
+        }
+
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut gpus = Vec::new();
+
+        for line in output_str.lines().skip(1) { // Skip header
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() >= 3 {
+                let memory_bytes = parts[0].parse::<u64>().unwrap_or(0);
+                let driver_version = if parts[1].trim().is_empty() { None } else { Some(parts[1].trim().to_string()) };
+                let name = parts[2].trim().to_string();
+
+                if name.is_empty() {
+                    continue;
+                }
+
+                let vendor = if name.to_lowercase().contains("nvidia") {
+                    GpuVendor::Nvidia
+                } else if name.to_lowercase().contains("amd") || name.to_lowercase().contains("radeon") {
+                    GpuVendor::Amd
+                } else if name.to_lowercase().contains("intel") {
+                    GpuVendor::Intel
+                } else {
+                    GpuVendor::Other
+                };
+
+                let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
+                    self.get_compute_capability_sync(&name)
+                } else {
+                    None
+                };
+
+                let gpu = GpuInfo {
+                    name,
+                    vendor,
+                    memory_mb: Some(memory_bytes / (1024 * 1024)),
+                    driver_version,
+                    compute_capability,
+                    pci_id: None,
+                };
+                gpus.push(gpu);
+            }
+        }
+
+        Ok(gpus)
     }
 
     /// Detect GPUs on Windows using wmic
