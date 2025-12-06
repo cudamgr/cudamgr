@@ -122,11 +122,46 @@ cargo run -- logs --lines 0
 ## 📖 Documentation
 
 - **[DEVELOPER.md](DEVELOPER.md)** - Technical details, architecture, and development guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contributing guidelines and development workflow
 
 ## 🤝 Contributing
 
-1. Check [DEVELOPER.md](DEVELOPER.md) for technical setup
-2. Review current tasks in `.kiro/specs/cudamgr/tasks.md`
-3. Run `cargo test` to ensure everything works
-4. Test CLI commands manually before submitting changes
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+### Quick Start for Contributors
+
+1. Fork the repository and clone your fork
+2. Create a branch for your changes: `git checkout -b feature/your-feature`
+3. Make your changes and add tests
+4. Run the pre-submission checks:
+   ```bash
+   # Linux/macOS
+   ./scripts/check.sh
+   
+   # Windows PowerShell
+   .\scripts\check.ps1
+   ```
+5. Submit a pull request
+
+### Pre-Submission Checklist
+
+Before submitting a PR, ensure:
+- ✅ Code is formatted: `cargo fmt`
+- ✅ No linting errors: `cargo clippy --all-targets --all-features -- -D warnings`
+- ✅ Project builds: `cargo build`
+- ✅ All tests pass: `cargo test`
+
+All PRs must pass CI checks (formatting, linting, building, and tests on Linux, Windows, and macOS) before they can be merged.
+
+## 🔄 CI/CD
+
+This project uses GitHub Actions for continuous integration. Every pull request automatically runs:
+
+- **Format Check**: Ensures code follows Rust formatting standards
+- **Clippy Lint**: Catches common mistakes and enforces best practices
+- **Build Verification**: Compiles on Linux, Windows, and macOS
+- **Test Suite**: Runs all tests on all platforms
+- **Security Audit**: Checks for known vulnerabilities
+
+All checks must pass before a PR can be merged. See [.github/workflows/ci.yml](.github/workflows/ci.yml) for details.
 
