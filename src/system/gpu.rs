@@ -472,7 +472,7 @@ impl DefaultGpuDetector {
                 } else if name.to_lowercase().contains("intel") {
                     GpuVendor::Intel
                 } else {
-                    GpuVendor::Other
+                    GpuVendor::Unknown("Unknown".to_string())
                 };
 
                 let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {

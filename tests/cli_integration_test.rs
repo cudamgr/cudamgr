@@ -46,14 +46,26 @@ fn test_install_help() {
 }
 
 #[test]
-fn test_doctor_command_not_implemented() {
+fn test_doctor_command_execution() {
     let output = Command::new("cargo")
         .args(&["run", "--", "doctor"])
         .output()
         .expect("Failed to execute command");
 
-    // Should fail with "not implemented" error
-    assert!(!output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("not yet implemented") || stderr.contains("not implemented"));
+
+    // The doctor command is now implemented. 
+    // It might pass (Exit Code 0) on a valid machine or fail (Exit Code 1) on CI without a GPU.
+    // However, in BOTH cases, it should print the "System Information" report.
+    
+    // We check that the report logic actually ran by looking for headers from the report output.
+    let report_ran = stdout.contains("System Information") || stdout.contains("Compatibility Summary");
+    
+    if !report_ran {
+        println!("STDOUT: {}", stdout);
+        println!("STDERR: {}", stderr);
+    }
+
+    assert!(report_ran, "Doctor command did not generate a system report");
 }
