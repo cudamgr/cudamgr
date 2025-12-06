@@ -5,7 +5,6 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch:  # Allows manual triggering from GitHub UI
 
 env:
   CARGO_TERM_COLOR: always
@@ -57,8 +56,19 @@ jobs:
 
   # Build verification - ensures the project compiles
   build:
-    name: Build (Linux)
-    runs-on: ubuntu-latest
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            rust: stable
+          - os: windows-latest
+            rust: stable
+          - os: macos-latest
+            rust: stable
     
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +89,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       
-      - name: Build (release)
+      - name: Build
         run: cargo build --verbose --release
       
       - name: Build (debug)
@@ -87,8 +97,12 @@ jobs:
 
   # Test suite - runs all tests
   test:
-    name: Test Suite (Linux)
-    runs-on: ubuntu-latest
+    name: Test Suite (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     
     steps:
       - uses: actions/checkout@v4
