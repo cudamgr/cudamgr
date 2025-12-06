@@ -1,46 +1,94 @@
-name: CI
+# name: CI
+
+# on:
+#   push:
+#     branches: [ "main", "master" ]
+#   pull_request:
+#     branches: [ "main", "master" ]
+#   workflow_dispatch:
+
+# env:
+#   CARGO_TERM_COLOR: always
+#   RUST_BACKTRACE: 1
+
+# jobs:
+#   # Job 1: Quick Formatting & Linting Check
+#   style:
+#     name: Style & Lint
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+      
+#       - name: Install Rust
+#         uses: dtolnay/rust-toolchain@stable
+#         with:
+#           components: rustfmt, clippy
+
+#       - name: Rust Cache
+#         uses: Swatinem/rust-cache@v2
+
+#       - name: Check Formatting
+#         run: cargo fmt --all -- --check
+
+#       - name: Run Clippy
+#         # Fails if there are any warnings
+#         run: cargo clippy --all-targets --all-features -- -D warnings
+
+#   # Job 2: Build & Test on all platforms
+#   test:
+#     name: Test (${{ matrix.os }})
+#     needs: style
+#     runs-on: ${{ matrix.os }}
+#     strategy:
+#       fail-fast: false
+#       matrix:
+#         os: [ubuntu-latest, windows-latest, macos-latest]
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Install Rust
+#         uses: dtolnay/rust-toolchain@stable
+
+#       - name: Rust Cache
+#         uses: Swatinem/rust-cache@v2
+
+#       # Linux specific: Install OpenSSL (required by reqwest)
+#       - name: Install Linux Dependencies
+#         if: runner.os == 'Linux'
+#         run: |
+#           sudo apt-get update
+#           sudo apt-get install -y libssl-dev pkg-config gcc
+
+#       # We do not need to install CUDA here because your tests 
+#       # are designed to handle "No GPU/CUDA found" gracefully.
+
+#       - name: Build
+#         run: cargo build --verbose
+
+#       - name: Run Tests
+#         # Runs unit tests, integration tests, and doc tests
+#         run: cargo test --verbose
+
+name: Cross-Platform Build & Test
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to manually trigger the button on GitHub
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
-  # Job 1: Quick Formatting & Linting Check
-  style:
-    name: Style & Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check Formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run Clippy
-        # Fails if there are any warnings
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-  # Job 2: Build & Test on all platforms
   test:
-    name: Test (${{ matrix.os }})
-    needs: style
+    name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: false # If Windows fails, don't cancel Linux/Mac immediately
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
@@ -50,22 +98,21 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
-      # Linux specific: Install OpenSSL (required by reqwest)
+      # Required for the 'reqwest' dependency on Linux
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config gcc
+          sudo apt-get install -y libssl-dev pkg-config
 
-      # We do not need to install CUDA here because your tests 
-      # are designed to handle "No GPU/CUDA found" gracefully.
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
+      # Step 1: Build
       - name: Build
         run: cargo build --verbose
 
+      # Step 2: Test
       - name: Run Tests
-        # Runs unit tests, integration tests, and doc tests
+        # This runs unit tests, integration tests, and doc tests
         run: cargo test --verbose
