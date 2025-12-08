@@ -24,7 +24,7 @@ fn test_data_model_integration() {
     );
     assert_eq!(installation.version, "11.8");
     // assert_eq!(installation.get_nvcc_path(), PathBuf::from("/usr/local/cuda-11.8/bin/nvcc"));
-    let binary_name = if cfg!(windows) { "nvcc.exe" } else { "nvcc" }
+    let binary_name = if cfg!(windows) { "nvcc.exe" } else { "nvcc" };
     let expected_path = install_path.join("bin").join(binary_name);
     
     assert_eq!(installation.get_nvcc_path(), expected_path);
