@@ -114,8 +114,46 @@ impl StorageInfo {
     /// Get disk space on Windows systems
     #[cfg(windows)]
     fn get_disk_space_windows(path: &Path) -> CudaMgrResult<(u64, u64)> {
-        // Simplified implementation for now - would use Windows APIs in production
-        Ok((50 * 1024 * 1024 * 1024, 100 * 1024 * 1024 * 1024)) // Mock 50GB available, 100GB total
+        use std::process::Command;
+        
+        let path_buf = path.to_path_buf();
+        let drive_letter = path_buf.components()
+            .next()
+            .and_then(|c| c.as_os_str().to_str())
+            .map(|s| s.trim_end_matches('\\').trim_end_matches('/'))
+            .unwrap_or("C:");
+
+        // Powershell command: Get-Volume -DriveLetter C | Select-Object -Property SizeRemaining, Size
+        // We strip the colon from drive letter for Get-Volume
+        let drive_char = drive_letter.trim_end_matches(':');
+        
+        let ps_command = format!(
+            "Get-Volume -DriveLetter {} | Select-Object -Property SizeRemaining, Size | ConvertTo-Json", 
+            drive_char
+        );
+        
+        let output = Command::new("powershell")
+            .args(&["-NoProfile", "-Command", &ps_command])
+            .output()
+            .map_err(|e| SystemError::StorageCheck(format!("Failed to run powershell: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(SystemError::StorageCheck("powershell command failed".to_string()).into());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        
+        // Output should be JSON: { "SizeRemaining": 12345, "Size": 67890 }
+        #[derive(Deserialize)]
+        struct VolumeInfo {
+            SizeRemaining: u64,
+            Size: u64,
+        }
+        
+        let info: VolumeInfo = serde_json::from_str(&stdout)
+            .map_err(|e| SystemError::StorageCheck(format!("Failed to parse powershell output: {}", e)))?;
+            
+        Ok((info.SizeRemaining, info.Size))
     }
 
     /// Check if there's enough space for installation

@@ -371,8 +371,10 @@ impl DefaultGpuDetector {
         }
         
         // Try partial matches for common patterns
+        let gpu_name_lower = gpu_name.to_lowercase();
         for (pattern, &capability) in &capability_map {
-            if gpu_name.contains(pattern) || pattern.contains(gpu_name) {
+            let pattern_lower = pattern.to_lowercase();
+            if gpu_name_lower.contains(&pattern_lower) || pattern_lower.contains(&gpu_name_lower) {
                 return Some(capability);
             }
         }
@@ -456,10 +458,11 @@ impl DefaultGpuDetector {
             }
 
             let parts: Vec<&str> = line.split(',').collect();
-            if parts.len() >= 3 {
-                let memory_bytes = parts[0].parse::<u64>().unwrap_or(0);
-                let driver_version = if parts[1].trim().is_empty() { None } else { Some(parts[1].trim().to_string()) };
-                let name = parts[2].trim().to_string();
+            // Expected format: Node, AdapterRAM, DriverVersion, Name
+            if parts.len() >= 4 {
+                let memory_bytes = parts[1].trim().parse::<u64>().unwrap_or(0);
+                let driver_version = if parts[2].trim().is_empty() { None } else { Some(parts[2].trim().to_string()) };
+                let name = parts[3].trim().to_string();
 
                 if name.is_empty() {
                     continue;
@@ -514,11 +517,12 @@ impl DefaultGpuDetector {
                     }
 
                     let parts: Vec<&str> = line.split(',').collect();
+                    // Expected format: Node, AdapterRAM, DriverVersion, Name
                     if parts.len() >= 4 {
-                        let name = parts[2].trim().to_string();
+                        let name = parts[3].trim().to_string();
                         let memory_bytes = parts[1].trim().parse::<u64>().ok();
                         let memory_mb = memory_bytes.map(|b| b / (1024 * 1024));
-                        let driver_version = Some(parts[3].trim().to_string());
+                        let driver_version = Some(parts[2].trim().to_string());
 
                         let vendor = if name.to_lowercase().contains("nvidia") {
                             GpuVendor::Nvidia

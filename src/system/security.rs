@@ -107,13 +107,30 @@ impl SecurityInfo {
         }
         #[cfg(target_os = "windows")]
         {
-            // On Windows, we would use WMI or registry to check Secure Boot
-            // For now, return a basic implementation
+            use winreg::enums::*;
+            use winreg::RegKey;
+
+            // Check Secure Boot state from Registry
+            // Key: HKLM\SYSTEM\CurrentControlSet\Control\SecureBoot\State
+            // Value: UEFISecureBootEnabled (DWORD)
+            // 0 = Disabled, 1 = Enabled
+
+            let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+            let sb_key = hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State");
+            
+            let enabled = if let Ok(key) = sb_key {
+                key.get_value::<u32, _>("UEFISecureBootEnabled").unwrap_or(0) == 1
+            } else {
+                false
+            };
+
+            // SetupMode and other details are harder to get without extensive API usage
+            // defaulting to safe assumptions
             Ok(SecureBootInfo {
-                enabled: false,
+                enabled,
                 setup_mode: false,
-                vendor_keys: false,
-                platform_key_present: false,
+                vendor_keys: true, // Standard assumption for Windows
+                platform_key_present: true,
             })
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
@@ -137,11 +154,8 @@ impl SecurityInfo {
         }
         #[cfg(target_os = "windows")]
         {
-            // On Windows, check if running as administrator
-            // This is a simplified check - in production would use proper Windows APIs
-            std::env::var("USERNAME")
-                .map(|user| user.to_lowercase().contains("admin"))
-                .unwrap_or(false)
+            // Check for elevated privileges using is_elevated crate
+            is_elevated::is_elevated()
         }
         #[cfg(not(any(unix, target_os = "windows")))]
         {
@@ -176,11 +190,18 @@ impl SecurityInfo {
         }
         #[cfg(target_os = "windows")]
         {
-            // On Windows, check if UEFI firmware is present
-            // This is a simplified check
-            std::env::var("FIRMWARE_TYPE")
-                .map(|fw| fw.to_uppercase() == "UEFI")
-                .unwrap_or(false)
+            // Check FIRMWARE_TYPE environment variable (often present)
+            // Or try to access UEFI-only registry keys
+            if let Ok(fw_type) = std::env::var("FIRMWARE_TYPE") {
+                return fw_type.to_uppercase() == "UEFI";
+            }
+            
+            // Fallback: Check if SecureBoot registry key exists (only on UEFI)
+            use winreg::enums::*;
+            use winreg::RegKey;
+            
+            let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+            hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State").is_ok()
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {

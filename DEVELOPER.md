@@ -80,12 +80,6 @@ tests/                   # Integration tests
 ├── cli_integration_test.rs  # CLI integration tests
 └── ...                      # Additional integration tests
 
-.kiro/                   # Kiro AI specification files
-├── specs/
-│   └── cudamgr/
-│       ├── requirements.md  # Feature requirements
-│       ├── design.md        # System design document
-│       └── tasks.md         # Implementation task list
 ```
 
 ## 🔧 Dependencies

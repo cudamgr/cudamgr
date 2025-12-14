@@ -21,6 +21,7 @@ pub enum CompatibilityStatus {
     Compatible,
     CompatibleWithWarnings,
     Incompatible,
+    PrerequisitesMissing,
     Unknown,
 }
 
@@ -235,9 +236,28 @@ impl SystemReportGenerator {
             }
         }
 
+        // Check for hardware compatibility first
+        let hardware_compatible = system_info.gpu.is_some() 
+            && system_info.driver.is_some();
+
         // Determine overall compatibility status
         if has_errors {
-            CompatibilityStatus::Incompatible
+            if hardware_compatible {
+                // Determine if errors are just missing prerequisites
+                let only_setup_errors = errors.iter().all(|e| 
+                    e.contains("required") || 
+                    e.contains("compiler") || 
+                    e.contains("Cannot install") // Admin error
+                );
+
+                if only_setup_errors {
+                    CompatibilityStatus::PrerequisitesMissing
+                } else {
+                    CompatibilityStatus::Incompatible
+                }
+            } else {
+                CompatibilityStatus::Incompatible
+            }
         } else if has_warnings {
             CompatibilityStatus::CompatibleWithWarnings
         } else {
@@ -257,7 +277,11 @@ impl fmt::Display for SystemReport {
 
         // System Information
         writeln!(f, "=== System Information ===")?;
-        writeln!(f, "OS: {} {}", self.system_info.distro.name, self.system_info.distro.version)?;
+        if self.system_info.distro.version.starts_with(&self.system_info.distro.name) {
+            writeln!(f, "OS: {}", self.system_info.distro.version)?;
+        } else {
+            writeln!(f, "OS: {} {}", self.system_info.distro.name, self.system_info.distro.version)?;
+        }
         
         if let Some(gpu) = &self.system_info.gpu {
             let memory_str = gpu.memory_mb.map(|m| format!("{} MB", m)).unwrap_or_else(|| "Unknown".to_string());
@@ -359,6 +383,7 @@ impl fmt::Display for CompatibilityStatus {
             CompatibilityStatus::Compatible => write!(f, "✅ Compatible"),
             CompatibilityStatus::CompatibleWithWarnings => write!(f, "⚠️  Compatible (with warnings)"),
             CompatibilityStatus::Incompatible => write!(f, "❌ Incompatible"),
+            CompatibilityStatus::PrerequisitesMissing => write!(f, "⚠️  Compatible (Prerequisites Missing)"),
             CompatibilityStatus::Unknown => write!(f, "❓ Unknown"),
         }
     }

@@ -52,9 +52,8 @@ impl DriverInfo {
 
     /// Detect driver via nvidia-smi command
     fn detect_via_nvidia_smi() -> CudaMgrResult<Self> {
+        // Run nvidia-smi without arguments to get the full status table which includes "CUDA Version: XX.X"
         let output = Command::new("nvidia-smi")
-            .arg("--query-gpu=driver_version")
-            .arg("--format=csv,noheader,nounits")
             .output()
             .map_err(|e| SystemError::DriverDetection(format!("Failed to run nvidia-smi: {}", e)))?;
 
@@ -62,21 +61,35 @@ impl DriverInfo {
             return Err(SystemError::DriverDetection("nvidia-smi command failed".to_string()).into());
         }
 
-        let version = String::from_utf8(output.stdout)
-            .map_err(|e| SystemError::DriverDetection(format!("Invalid nvidia-smi output: {}", e)))?
-            .trim()
-            .to_string();
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        
+        // Parse Driver Version
+        // Look for: "Driver Version: 576.52"
+        let driver_version = output_str.lines()
+            .find(|line| line.contains("Driver Version:"))
+            .and_then(|line| {
+                let parts: Vec<&str> = line.split("Driver Version:").collect();
+                parts.get(1).map(|v| v.split_whitespace().next().unwrap_or("").trim().to_string())
+            })
+            .ok_or_else(|| SystemError::DriverDetection("Could not parse driver version".to_string()))?;
 
-        if version.is_empty() {
-            return Err(SystemError::DriverDetection("Empty driver version from nvidia-smi".to_string()).into());
-        }
-
-        let max_cuda_version = Self::get_max_cuda_version(&version);
+        // Parse CUDA Version
+        // Look for: "CUDA Version: 12.9"
+        let max_cuda_version = output_str.lines()
+            .find(|line| line.contains("CUDA Version:"))
+            .and_then(|line| {
+                let parts: Vec<&str> = line.split("CUDA Version:").collect();
+                parts.get(1).map(|v| v.split_whitespace().next().unwrap_or("").trim().to_string())
+            })
+            .or_else(|| {
+                // Fallback to table mapping if parsing fails
+                Self::get_max_cuda_version(&driver_version)
+            });
 
         Ok(Self::new(
-            version,
+            driver_version,
             true,
-            true,
+            true, // Assuming modern drivers support CUDA
             max_cuda_version,
         ))
     }
@@ -117,9 +130,69 @@ impl DriverInfo {
     /// Detect driver via Windows registry
     #[cfg(target_os = "windows")]
     fn detect_via_registry() -> CudaMgrResult<Self> {
-        // This is a simplified implementation
-        // In a real implementation, you'd use winreg crate to read registry
-        Err(SystemError::DriverDetection("Windows registry detection not implemented".to_string()).into())
+        use winreg::enums::*;
+        use winreg::RegKey;
+
+        // Try to find NVIDIA driver version in registry
+        // Common location: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}
+        // We need to search through subkeys (0000, 0001, etc.) to find the one with "DriverVersion"
+        
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let video_class_path = "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
+        
+        let video_class = hklm.open_subkey(video_class_path)
+            .map_err(|e| SystemError::DriverDetection(format!("Failed to open video class registry key: {}", e)))?;
+            
+        for key_name in video_class.enum_keys().map(|x| x.unwrap_or_default()) {
+            if let Ok(subkey) = video_class.open_subkey(&key_name) {
+                // Check if this is an NVIDIA adapter
+                let provider: String = subkey.get_value("ProviderName").unwrap_or_default();
+                if provider.to_lowercase().contains("nvidia") {
+                    if let Ok(version_raw) = subkey.get_value::<String, _>("DriverVersion") {
+                        // Windows driver version format: XX.XX.XX.XXXX
+                        // The last 5 digits usually contain the user-facing version
+                        // Example: 31.0.15.3623 -> 536.23
+                        
+                        let clean_version = version_raw.replace(".", "");
+                        if clean_version.len() >= 5 {
+                            let len = clean_version.len();
+                            let last_five = &clean_version[len-5..];
+                            // Format as XXX.XX
+                            let major = &last_five[..3];
+                            let minor = &last_five[3..];
+                            
+                            // Remove leading zero if present (e.g. 053 -> 53)
+                            let major_trimmed = if major.starts_with('0') { &major[1..] } else { major };
+                            
+                            let version = format!("{}.{}", major_trimmed, minor);
+                            let max_cuda_version = Self::get_max_cuda_version(&version);
+                            
+                            return Ok(Self::new(
+                                version,
+                                true,
+                                true,
+                                max_cuda_version,
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: Try NVTweak location
+        if let Ok(nv_key) = hklm.open_subkey("SOFTWARE\\NVIDIA Corporation\\Global\\NVTweak") {
+             if let Ok(version) = nv_key.get_value::<String, _>("DriverVersion") {
+                 let max_cuda_version = Self::get_max_cuda_version(&version);
+                 return Ok(Self::new(
+                    version,
+                    true,
+                    true,
+                    max_cuda_version,
+                 ));
+             }
+        }
+        
+        Err(SystemError::DriverDetection("NVIDIA driver not found in registry".to_string()).into())
     }
 
     /// Get maximum supported CUDA version for a driver version
@@ -129,7 +202,13 @@ impl DriverInfo {
         let version_parts: Vec<&str> = driver_version.split('.').collect();
         if let Ok(major) = version_parts.get(0).unwrap_or(&"0").parse::<u32>() {
             match major {
-                525.. => Some("12.0".to_string()),
+                570.. => Some("12.8".to_string()), // Covers 570.x+
+                560..=569 => Some("12.6".to_string()),
+                550..=559 => Some("12.4".to_string()), 
+                545..=549 => Some("12.3".to_string()),
+                535..=544 => Some("12.2".to_string()),
+                530..=534 => Some("12.1".to_string()),
+                525..=529 => Some("12.0".to_string()),
                 520..=524 => Some("11.8".to_string()),
                 515..=519 => Some("11.7".to_string()),
                 510..=514 => Some("11.6".to_string()),
@@ -139,7 +218,14 @@ impl DriverInfo {
                 450..=459 => Some("11.0".to_string()),
                 440..=449 => Some("10.2".to_string()),
                 410..=439 => Some("10.1".to_string()),
-                _ => None,
+                _ => {
+                    // Fallback for very new drivers not yet mapped
+                    if major > 560 {
+                        Some("12.8".to_string()) // Assumption for future drivers
+                    } else {
+                        None
+                    }
+                },
             }
         } else {
             None

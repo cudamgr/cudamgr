@@ -126,14 +126,33 @@ impl DistroInfo {
 
     #[cfg(target_os = "windows")]
     fn detect_windows() -> crate::error::CudaMgrResult<Self> {
-        // Basic Windows detection - can be enhanced with WinAPI calls
+        use winreg::enums::*;
+        use winreg::RegKey;
+        
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        let cv = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
+            .map_err(|e| crate::error::SystemError::DistroDetection(format!("Failed to open registry: {}", e)))?;
+            
+        let product_name: String = cv.get_value("ProductName").unwrap_or("Windows".to_string());
+        let current_build: String = cv.get_value("CurrentBuild").unwrap_or("unknown".to_string());
+        let display_version: String = cv.get_value("DisplayVersion").unwrap_or("unknown".to_string());
+        
+        // Windows 11 detection (since ProductName often still says "Windows 10")
+        // Build number 22000+ is Windows 11
+        let mut final_name = product_name.clone();
+        if let Ok(build_num) = current_build.parse::<u32>() {
+            if build_num >= 22000 && product_name.contains("Windows 10") {
+                final_name = product_name.replace("Windows 10", "Windows 11");
+            }
+        }
+
         Ok(Self::new(
             OsType::Windows(WindowsVersion {
-                version: "10".to_string(),
-                build: "unknown".to_string(),
+                version: display_version.clone(),
+                build: current_build,
             }),
             "Windows".to_string(),
-            "10".to_string(),
+            format!("{} ({})", final_name, display_version),
             None,
             PackageManager::Winget,
         ))

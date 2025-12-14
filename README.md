@@ -126,7 +126,6 @@ cargo run -- logs --lines 0
 ## 🤝 Contributing
 
 1. Check [DEVELOPER.md](DEVELOPER.md) for technical setup
-2. Review current tasks in `.kiro/specs/cudamgr/tasks.md`
-3. Run `cargo test` to ensure everything works
-4. Test CLI commands manually before submitting changes
+2. Run `cargo test` to ensure everything works
+3. Test CLI commands manually before submitting changes
 

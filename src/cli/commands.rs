@@ -242,6 +242,10 @@ impl CommandHandler for DoctorHandler {
                     "System compatibility check failed".to_string()
                 )))
             }
+            crate::system::CompatibilityStatus::PrerequisitesMissing => {
+                OutputFormatter::warning("System is compatible but requires setup (Admin/Compiler)");
+                Ok(())
+            }
             crate::system::CompatibilityStatus::Unknown => {
                 OutputFormatter::warning("System compatibility could not be determined");
                 Ok(())

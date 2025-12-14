@@ -19,5 +19,9 @@ async-trait = "0.1"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+winreg = "0.50"
+is_elevated = "0.1"
+
 [dev-dependencies]
 tokio-test = "0.4"
