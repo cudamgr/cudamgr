@@ -44,3 +44,17 @@ jobs:
       - name: Run Tests
         # This runs unit tests, integration tests, and doc tests
         run: cargo test --verbose
+
+  notify:
+    name: Discord Notification
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && success()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Discord Notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
+        with:
+          args: '@everyone we today have an update: {{ EVENT_PAYLOAD.head_commit.message }}'
