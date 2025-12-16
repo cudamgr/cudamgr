@@ -271,6 +271,7 @@ dependencies = [
  "dirs",
  "is_elevated",
  "libc",
+ "once_cell",
  "reqwest",
  "serde",
  "serde_json",

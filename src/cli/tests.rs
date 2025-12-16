@@ -107,6 +107,7 @@ mod tests {
                     CompatibilityStatus::Compatible |
                     CompatibilityStatus::CompatibleWithWarnings |
                     CompatibilityStatus::Incompatible |
+                    CompatibilityStatus::PrerequisitesMissing |
                     CompatibilityStatus::Unknown
                 ));
                 
@@ -237,6 +238,8 @@ mod tests {
                     cuda_home_path: None,
                 },
             },
+            wsl: None,
+            visual_studio: None,
         };
         
         let cuda_detection = CudaDetectionResult {

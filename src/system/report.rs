@@ -49,7 +49,14 @@ impl SystemReportGenerator {
         let storage = super::storage::StorageInfo::detect(&storage_path)?;
         
         // Detect security information
+        // Detect security information
         let security = super::security::SecurityInfo::detect()?;
+
+        // Detect WSL information
+        let wsl = super::wsl::WslInfo::detect().ok();
+
+        // Detect Visual Studio (Windows only)
+        let visual_studio = super::visual_studio::VisualStudioInfo::detect().unwrap_or(None);
         
         Ok(SystemInfo {
             gpu,
@@ -58,6 +65,8 @@ impl SystemReportGenerator {
             distro,
             storage,
             security,
+            wsl,
+            visual_studio,
         })
     }
 
@@ -99,7 +108,35 @@ impl SystemReportGenerator {
         errors: &mut Vec<String>,
     ) -> CompatibilityStatus {
         let mut has_errors = false;
+
         let mut has_warnings = false;
+
+        // Check WSL status
+        if let Some(wsl) = &system_info.wsl {
+             if wsl.is_wsl {
+                 recommendations.push(format!("WSL Environment detected ({:?})", wsl.version));
+                 recommendations.push("Ensure NVIDIA Drivers are installed on the Windows HOST, not inside WSL".to_string());
+             }
+        }
+
+        // Check Visual Studio on Windows
+        if cfg!(target_os = "windows") {
+             match &system_info.visual_studio {
+                 Some(vs) => {
+                     if vs.is_installed {
+                         recommendations.push(format!("Visual Studio detected: {} ({})", vs.name, vs.version));
+                     } else {
+                         // Should not happen if Option is Some, but good for safety
+                     }
+                 }
+                 None => {
+                     // Only strictly an error if we are indeed on Windows and need to compile extensions
+                     // But for standard users, it's a strong recommendation/warning
+                     warnings.push("Visual Studio C++ Build Tools not found (Required for compiling CUDA kernels)".to_string());
+                     recommendations.push("Install Visual Studio with 'Desktop development with C++' workload".to_string());
+                 }
+             }
+        }
 
         // Check GPU compatibility
         match &system_info.gpu {
@@ -311,6 +348,16 @@ impl fmt::Display for SystemReport {
         writeln!(f, "Admin Privileges: {}", self.system_info.security.has_admin_privileges)?;
         writeln!(f, "Secure Boot: {}", 
             if self.system_info.security.secure_boot_enabled { "Enabled" } else { "Disabled" })?;
+        
+        if let Some(wsl) = &self.system_info.wsl {
+             if wsl.is_wsl {
+                 writeln!(f, "Environment: WSL ({:?}) - {}", wsl.version, wsl.distribution)?;
+             }
+        }
+        
+        if let Some(vs) = &self.system_info.visual_studio {
+             writeln!(f, "Visual Studio: {} (v{})", vs.name, vs.version)?;
+        }
         writeln!(f)?;
 
         // CUDA Installations

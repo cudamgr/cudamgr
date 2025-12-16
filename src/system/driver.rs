@@ -197,39 +197,8 @@ impl DriverInfo {
 
     /// Get maximum supported CUDA version for a driver version
     pub fn get_max_cuda_version(driver_version: &str) -> Option<String> {
-        // Parse driver version and map to CUDA version
-        // This is a simplified mapping - real implementation would use NVIDIA's compatibility matrix
-        let version_parts: Vec<&str> = driver_version.split('.').collect();
-        if let Ok(major) = version_parts.get(0).unwrap_or(&"0").parse::<u32>() {
-            match major {
-                570.. => Some("12.8".to_string()), // Covers 570.x+
-                560..=569 => Some("12.6".to_string()),
-                550..=559 => Some("12.4".to_string()), 
-                545..=549 => Some("12.3".to_string()),
-                535..=544 => Some("12.2".to_string()),
-                530..=534 => Some("12.1".to_string()),
-                525..=529 => Some("12.0".to_string()),
-                520..=524 => Some("11.8".to_string()),
-                515..=519 => Some("11.7".to_string()),
-                510..=514 => Some("11.6".to_string()),
-                495..=509 => Some("11.5".to_string()),
-                470..=494 => Some("11.4".to_string()),
-                460..=469 => Some("11.2".to_string()),
-                450..=459 => Some("11.0".to_string()),
-                440..=449 => Some("10.2".to_string()),
-                410..=439 => Some("10.1".to_string()),
-                _ => {
-                    // Fallback for very new drivers not yet mapped
-                    if major > 560 {
-                        Some("12.8".to_string()) // Assumption for future drivers
-                    } else {
-                        None
-                    }
-                },
-            }
-        } else {
-            None
-        }
+        use crate::system::compatibility::REGISTRY;
+        REGISTRY.get_max_cuda_version(driver_version)
     }
 
     /// Check if driver supports the given CUDA version

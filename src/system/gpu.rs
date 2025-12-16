@@ -172,7 +172,7 @@ impl DefaultGpuDetector {
                 let driver_version = Some(parts[2].to_string());
                 let pci_id = Some(parts[3].to_string());
 
-                let compute_capability = self.get_compute_capability_sync(&name);
+                let compute_capability = self.get_compute_capability(&name);
 
                 let gpu = GpuInfo {
                     name,
@@ -212,7 +212,7 @@ impl DefaultGpuDetector {
                         let driver_version = Some(parts[2].to_string());
                         let pci_id = Some(parts[3].to_string());
 
-                        let compute_capability = self.get_compute_capability(&name).await;
+                        let compute_capability = self.get_compute_capability(&name);
 
                         let gpu = GpuInfo {
                             name,
@@ -360,82 +360,15 @@ impl DefaultGpuDetector {
         (vendor, name)
     }
 
-    /// Get compute capability for NVIDIA GPU based on name (synchronous version)
-    fn get_compute_capability_sync(&self, gpu_name: &str) -> Option<(u32, u32)> {
-        // This is a simplified mapping - in a real implementation, you'd want a more comprehensive database
-        let capability_map = self.get_compute_capability_map();
-        
-        // Try exact match first
-        if let Some(&capability) = capability_map.get(gpu_name) {
-            return Some(capability);
-        }
-        
-        // Try partial matches for common patterns
-        let gpu_name_lower = gpu_name.to_lowercase();
-        for (pattern, &capability) in &capability_map {
-            let pattern_lower = pattern.to_lowercase();
-            if gpu_name_lower.contains(&pattern_lower) || pattern_lower.contains(&gpu_name_lower) {
-                return Some(capability);
-            }
-        }
-        
-        None
-    }
+
 
     /// Get compute capability for NVIDIA GPU based on name
-    async fn get_compute_capability(&self, gpu_name: &str) -> Option<(u32, u32)> {
-        // This is a simplified mapping - in a real implementation, you'd want a more comprehensive database
-        let capability_map = self.get_compute_capability_map();
-        
-        for (pattern, capability) in capability_map {
-            if gpu_name.to_lowercase().contains(&pattern.to_lowercase()) {
-                return Some(capability);
-            }
-        }
-
-        None
+    fn get_compute_capability(&self, gpu_name: &str) -> Option<(u32, u32)> {
+        use crate::system::compatibility::REGISTRY;
+        REGISTRY.get_compute_capability(gpu_name)
     }
 
-    /// Get a mapping of GPU name patterns to compute capabilities
-    fn get_compute_capability_map(&self) -> HashMap<&'static str, (u32, u32)> {
-        let mut map = HashMap::new();
-        
-        // RTX 40 series (Ada Lovelace) - Compute Capability 8.9
-        map.insert("rtx 4090", (8, 9));
-        map.insert("rtx 4080", (8, 9));
-        map.insert("rtx 4070", (8, 9));
-        map.insert("rtx 4060", (8, 9));
-        
-        // RTX 30 series (Ampere) - Compute Capability 8.6
-        map.insert("rtx 3090", (8, 6));
-        map.insert("rtx 3080", (8, 6));
-        map.insert("rtx 3070", (8, 6));
-        map.insert("rtx 3060", (8, 6));
-        map.insert("rtx 3050", (8, 6));
-        
-        // RTX 20 series (Turing) - Compute Capability 7.5
-        map.insert("rtx 2080", (7, 5));
-        map.insert("rtx 2070", (7, 5));
-        map.insert("rtx 2060", (7, 5));
-        
-        // GTX 16 series (Turing) - Compute Capability 7.5
-        map.insert("gtx 1660", (7, 5));
-        map.insert("gtx 1650", (7, 5));
-        
-        // GTX 10 series (Pascal) - Compute Capability 6.1
-        map.insert("gtx 1080", (6, 1));
-        map.insert("gtx 1070", (6, 1));
-        map.insert("gtx 1060", (6, 1));
-        map.insert("gtx 1050", (6, 1));
-        
-        // Tesla/Quadro cards
-        map.insert("tesla v100", (7, 0));
-        map.insert("tesla p100", (6, 0));
-        map.insert("tesla k80", (3, 7));
-        map.insert("quadro rtx", (7, 5));
-        
-        map
-    }
+
 
     /// Detect GPUs on Windows using wmic (synchronous version)
     #[cfg(target_os = "windows")]
@@ -479,7 +412,7 @@ impl DefaultGpuDetector {
                 };
 
                 let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
-                    self.get_compute_capability_sync(&name)
+                    self.get_compute_capability(&name)
                 } else {
                     None
                 };
@@ -535,7 +468,7 @@ impl DefaultGpuDetector {
                         };
 
                         let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
-                            self.get_compute_capability(&name).await
+                            self.get_compute_capability(&name)
                         } else {
                             None
                         };
@@ -700,46 +633,45 @@ mod tests {
         assert!(detector.parse_lspci_line(invalid_line).is_none());
     }
 
-    #[tokio::test]
-    async fn test_compute_capability_mapping() {
+    #[test]
+    fn test_compute_capability_mapping() {
         let detector = DefaultGpuDetector::new();
         
         // Test RTX 40 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 4090").await, Some((8, 9)));
-        assert_eq!(detector.get_compute_capability("GeForce RTX 4080").await, Some((8, 9)));
+        assert_eq!(detector.get_compute_capability("GeForce RTX 4090"), Some((8, 9)));
+        assert_eq!(detector.get_compute_capability("GeForce RTX 4080"), Some((8, 9)));
         
         // Test RTX 30 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 3080").await, Some((8, 6)));
-        assert_eq!(detector.get_compute_capability("GeForce RTX 3070").await, Some((8, 6)));
+        assert_eq!(detector.get_compute_capability("GeForce RTX 3080"), Some((8, 6)));
+        assert_eq!(detector.get_compute_capability("GeForce RTX 3070"), Some((8, 6)));
         
         // Test RTX 20 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 2080 Ti").await, Some((7, 5)));
+        assert_eq!(detector.get_compute_capability("GeForce RTX 2080 Ti"), Some((7, 5)));
         
         // Test GTX 10 series
-        assert_eq!(detector.get_compute_capability("GeForce GTX 1080").await, Some((6, 1)));
+        assert_eq!(detector.get_compute_capability("GeForce GTX 1080"), Some((6, 1)));
         
         // Test Tesla cards
-        assert_eq!(detector.get_compute_capability("Tesla V100").await, Some((7, 0)));
+        assert_eq!(detector.get_compute_capability("Tesla V100"), Some((7, 0)));
         
         // Test unknown GPU
-        assert_eq!(detector.get_compute_capability("Unknown GPU Model").await, None);
+        assert_eq!(detector.get_compute_capability("Unknown GPU Model"), None);
     }
 
     #[test]
-    fn test_compute_capability_map_completeness() {
-        let detector = DefaultGpuDetector::new();
-        let map = detector.get_compute_capability_map();
+    fn test_compatibility_registry_completeness() {
+        use crate::system::compatibility::REGISTRY;
         
-        // Verify some key entries exist
-        assert!(map.contains_key("rtx 4090"));
-        assert!(map.contains_key("rtx 3080"));
-        assert!(map.contains_key("gtx 1080"));
-        assert!(map.contains_key("tesla v100"));
+        // Verify keys exist via direct lookup (since we can't iterate the private hashmap easily unless we expose it, but get_compute_capability covers it)
+        assert!(REGISTRY.get_compute_capability("rtx 4090").is_some());
+        assert!(REGISTRY.get_compute_capability("rtx 3080").is_some());
+        assert!(REGISTRY.get_compute_capability("gtx 1080").is_some());
+        assert!(REGISTRY.get_compute_capability("tesla v100").is_some());
         
-        // Verify compute capabilities are reasonable
-        assert_eq!(map.get("rtx 4090"), Some(&(8, 9)));
-        assert_eq!(map.get("rtx 3080"), Some(&(8, 6)));
-        assert_eq!(map.get("gtx 1080"), Some(&(6, 1)));
+        // Verify compute capabilities are correct
+        assert_eq!(REGISTRY.get_compute_capability("rtx 4090"), Some((8, 9)));
+        assert_eq!(REGISTRY.get_compute_capability("rtx 3080"), Some((8, 6)));
+        assert_eq!(REGISTRY.get_compute_capability("gtx 1080"), Some((6, 1)));
     }
 
     #[tokio::test]

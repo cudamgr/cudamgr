@@ -1,6 +1,9 @@
 # CudaMgr
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=flat&logo=discord&logoColor=white)](https://discord.gg/Kr7NdB5Qvu)
 
 A cross-platform CUDA version manager that simplifies installing, managing, and switching between different CUDA toolkit versions.
+
+<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/0710e86a-e1ff-47ca-a302-db90eb9a3213" />
 
 ## 🚀 Quick Start
 
@@ -108,16 +111,25 @@ cargo run -- logs --lines 0
 
 ## 🚧 Development Status
 
-**Current Phase: CLI Framework** ✅ **COMPLETED**
-- ✅ Command parsing and validation
-- ✅ Help system and error handling
-- ✅ Interactive prompts and progress indicators
-- ✅ Comprehensive test coverage
+**Current Phase: System Detection** 🚧 **IN PROGRESS**
+- ✅ CLI Framework & Command Parsing
+- ✅ GPU & Driver Detection (Refactored to use centralized Registry)
+- ✅ Windows Visual Studio Detection
+- ✅ WSL Environment Detection
+- 🚧 Dynamic Manifest Synchronization (Currently using built-in registry)
+- 🚧 Installation Logic (Download/Install/Verify)
 
-**Next Phase: System Detection** 🚧 **IN PROGRESS**
-- 🚧 GPU and driver detection
-- 🚧 OS and package manager detection
-- 🚧 Compatibility validation
+## 🔮 Roadmap & Missing Features
+
+The following features are industry standard but currently **missing** or planned for future releases:
+
+1.  **Auto-Update / Self-Update**: `cudamgr self-update` to update the CLI binary itself.
+2.  **Remote Manifest Sync**: Fetching the latest GPU/Driver/CUDA map from a remote JSON source instead of the built-in static registry.
+3.  **Visual Studio Integration**: Better integration with VS Installer to ensure specific workloads (Desktop C++) are present before CUDA install.
+4.  **Deep Learning Libraries**: Installing `cuDNN` and `TensorRT` alongside CUDA.
+5.  **Checksum Verification**: Validating SHA256 sums of downloaded installers.
+6.  **Resumable Downloads**: Support for resuming interrupted large downloads.
+7.  **Proxy Support**: Explicit configuration for corporate proxies.
 
 ## 📖 Documentation
 

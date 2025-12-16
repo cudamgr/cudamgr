@@ -6,6 +6,9 @@ pub mod storage;
 pub mod security;
 pub mod cuda;
 pub mod report;
+pub mod compatibility;
+pub mod wsl;
+pub mod visual_studio;
 
 pub use cuda::*;
 pub use distro::*;
@@ -15,6 +18,9 @@ pub use compiler::*;
 pub use storage::*;
 pub use security::*;
 pub use report::*;
+pub use compatibility::*;
+pub use wsl::*;
+pub use visual_studio::*;
 
 #[cfg(test)]
 mod tests;
@@ -34,6 +40,8 @@ pub struct SystemInfo {
     pub distro: distro::DistroInfo,
     pub storage: storage::StorageInfo,
     pub security: security::SecurityInfo,
+    pub wsl: Option<wsl::WslInfo>,
+    pub visual_studio: Option<visual_studio::VisualStudioInfo>,
 }
 
 /// System checker trait for validating compatibility
@@ -65,7 +73,14 @@ impl SystemChecker for DefaultSystemChecker {
         let storage = storage::StorageInfo::detect(&storage_path)?;
         
         // Detect security information
+        // Detect security information
         let security = security::SecurityInfo::detect()?;
+
+        // Detect WSL information
+        let wsl = wsl::WslInfo::detect().ok();
+
+        // Detect Visual Studio (Windows only)
+        let visual_studio = visual_studio::VisualStudioInfo::detect().unwrap_or(None);
         
         Ok(SystemInfo {
             gpu,
@@ -74,6 +89,8 @@ impl SystemChecker for DefaultSystemChecker {
             distro,
             storage,
             security,
+            wsl,
+            visual_studio,
         })
     }
 
