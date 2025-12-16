@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// use std::collections::HashMap; // Unused import removed
 use std::process::Command;
 use crate::error::{SystemError, CudaMgrResult};
 
@@ -120,7 +120,7 @@ impl DefaultGpuDetector {
                             let (vendor, name) = Self::parse_gpu_description(&description);
                             
                             let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
-                                self.get_compute_capability_sync(&name)
+                                self.get_compute_capability(&name)
                             } else {
                                 None
                             };

@@ -1,7 +1,9 @@
 use std::path::Path;
 use std::fs;
 use serde::{Deserialize, Serialize};
-use crate::error::{CudaMgrResult, SystemError};
+use crate::error::CudaMgrResult;
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
+use crate::error::SystemError;
 
 /// Security and permission information
 #[derive(Debug, Clone, Serialize, Deserialize)]
