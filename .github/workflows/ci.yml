@@ -75,7 +75,7 @@ jobs:
                   {name: "Author", value: $author, inline: true}
                 ],
                 footer: {text: "CudaMgr CI"},
-                timestamp: (now | iso8601)
+                timestamp: (now | todate)
               }]
             }' \
           | curl -H "Content-Type: application/json" -X POST -d @- $DISCORD_WEBHOOK
