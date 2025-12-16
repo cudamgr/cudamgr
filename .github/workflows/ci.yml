@@ -55,6 +55,27 @@ jobs:
       - name: Discord Notification
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        uses: Ilshidur/action-discord@master
-        with:
-          args: '@everyone we today have an update: {{ EVENT_PAYLOAD.head_commit.message }}'
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          jq -n \
+            --arg title "🚀 Build & Test Successful!" \
+            --arg desc "$COMMIT_MSG" \
+            --arg repo "${{ github.repository }}" \
+            --arg branch "${{ github.ref_name }}" \
+            --arg author "${{ github.actor }}" \
+            '{
+              content: "@everyone",
+              embeds: [{
+                title: $title,
+                description: $desc,
+                color: 3066993,
+                fields: [
+                  {name: "Repository", value: $repo, inline: true},
+                  {name: "Branch", value: $branch, inline: true},
+                  {name: "Author", value: $author, inline: true}
+                ],
+                footer: {text: "CudaMgr CI"},
+                timestamp: (now | iso8601)
+              }]
+            }' \
+          | curl -H "Content-Type: application/json" -X POST -d @- $DISCORD_WEBHOOK
