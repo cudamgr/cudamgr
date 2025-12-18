@@ -99,9 +99,9 @@ impl StorageInfo {
             .into());
         }
 
-        let block_size = statvfs.f_frsize as u64;
-        let available_blocks = statvfs.f_bavail as u64;
-        let total_blocks = statvfs.f_blocks as u64;
+        let block_size = statvfs.f_frsize;
+        let available_blocks = statvfs.f_bavail;
+        let total_blocks = statvfs.f_blocks;
 
         let available_bytes = available_blocks * block_size;
         let total_bytes = total_blocks * block_size;

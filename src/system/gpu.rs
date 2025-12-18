@@ -109,7 +109,7 @@ impl DefaultGpuDetector {
     #[cfg(not(target_os = "windows"))]
     pub fn detect_lspci_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         // If lspci fails, return empty list rather than error
-        match std::process::Command::new("lspci").args(&["-nn"]).output() {
+        match std::process::Command::new("lspci").args(["-nn"]).output() {
             Ok(output) if output.status.success() => {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 let mut gpus = Vec::new();
@@ -130,7 +130,7 @@ impl DefaultGpuDetector {
                             let (vendor, name) = Self::parse_gpu_description(&description);
 
                             let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
-                                self.get_compute_capability(&name)
+                                self.get_compute_capability(name)
                             } else {
                                 None
                             };
