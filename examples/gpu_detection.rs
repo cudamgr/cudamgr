@@ -52,11 +52,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("  NVIDIA GPU {}: {}", i + 1, gpu.name);
                     if let Some(capability) = gpu.compute_capability {
                         println!("    Compute Capability: {}.{}", capability.0, capability.1);
-                        
+
                         // Test some common CUDA requirements
-                        println!("    Supports CUDA 11.0+ (CC 3.5+): {}", gpu.supports_compute_capability((3, 5)));
-                        println!("    Supports CUDA 12.0+ (CC 5.0+): {}", gpu.supports_compute_capability((5, 0)));
-                        println!("    Supports Tensor Cores (CC 7.0+): {}", gpu.supports_compute_capability((7, 0)));
+                        println!(
+                            "    Supports CUDA 11.0+ (CC 3.5+): {}",
+                            gpu.supports_compute_capability((3, 5))
+                        );
+                        println!(
+                            "    Supports CUDA 12.0+ (CC 5.0+): {}",
+                            gpu.supports_compute_capability((5, 0))
+                        );
+                        println!(
+                            "    Supports Tensor Cores (CC 7.0+): {}",
+                            gpu.supports_compute_capability((7, 0))
+                        );
                     }
                     println!();
                 }

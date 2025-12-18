@@ -1,4 +1,4 @@
-use crate::error::{InstallError, CudaMgrResult};
+use crate::error::{CudaMgrResult, InstallError};
 use crate::install::InstallationPlan;
 
 /// Platform-specific installer implementation
@@ -21,14 +21,20 @@ impl PlatformInstaller {
     pub async fn install_windows(&self, plan: &InstallationPlan) -> CudaMgrResult<()> {
         // TODO: Implement Windows installation logic
         tracing::info!("Installing CUDA {} on Windows", plan.cuda_version);
-        Err(InstallError::Installation("Windows installation not yet implemented".to_string()).into())
+        Err(
+            InstallError::Installation("Windows installation not yet implemented".to_string())
+                .into(),
+        )
     }
 
     /// Install NVIDIA drivers automatically
     pub async fn install_drivers(&self, version: &str) -> CudaMgrResult<()> {
         // TODO: Implement driver installation
         tracing::info!("Installing NVIDIA drivers version {}", version);
-        Err(InstallError::Installation("Driver installation not yet implemented".to_string()).into())
+        Err(
+            InstallError::Installation("Driver installation not yet implemented".to_string())
+                .into(),
+        )
     }
 }
 

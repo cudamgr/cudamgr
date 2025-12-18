@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
-use crate::error::{VersionError, CudaMgrResult};
+use crate::error::{CudaMgrResult, VersionError};
 use crate::version::VersionInfo;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Version registry for tracking installed CUDA versions
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,9 +44,13 @@ impl VersionRegistry {
     pub fn remove_version(&mut self, version: &str) -> CudaMgrResult<()> {
         let initial_len = self.versions.len();
         self.versions.retain(|v| v.version != version);
-        
+
         if self.versions.len() == initial_len {
-            return Err(VersionError::NotFound(format!("Version {} not found in registry", version)).into());
+            return Err(VersionError::NotFound(format!(
+                "Version {} not found in registry",
+                version
+            ))
+            .into());
         }
 
         // If we removed the active version, clear it
@@ -61,7 +65,11 @@ impl VersionRegistry {
     pub fn set_active_version(&mut self, version: &str) -> CudaMgrResult<()> {
         // Verify the version exists
         if !self.versions.iter().any(|v| v.version == version) {
-            return Err(VersionError::NotFound(format!("Version {} not found in registry", version)).into());
+            return Err(VersionError::NotFound(format!(
+                "Version {} not found in registry",
+                version
+            ))
+            .into());
         }
 
         // Update active flags

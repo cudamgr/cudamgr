@@ -1,5 +1,5 @@
+use crate::error::{CudaMgrResult, InstallError};
 use std::path::Path;
-use crate::error::{InstallError, CudaMgrResult};
 
 /// Package downloader with progress tracking
 pub struct PackageDownloader {
@@ -25,13 +25,24 @@ impl PackageDownloader {
     pub async fn resume_download(&self, url: &str, destination: &Path) -> CudaMgrResult<()> {
         // TODO: Implement resume functionality
         tracing::info!("Resuming download from {} to {:?}", url, destination);
-        Err(InstallError::Download("Resume download functionality not yet implemented".to_string()).into())
+        Err(
+            InstallError::Download("Resume download functionality not yet implemented".to_string())
+                .into(),
+        )
     }
 
     /// Verify download integrity
-    pub async fn verify_integrity(&self, file_path: &Path, expected_hash: &str) -> CudaMgrResult<bool> {
+    pub async fn verify_integrity(
+        &self,
+        file_path: &Path,
+        expected_hash: &str,
+    ) -> CudaMgrResult<bool> {
         // TODO: Implement integrity verification
-        tracing::info!("Verifying integrity of {:?} with hash {}", file_path, expected_hash);
+        tracing::info!(
+            "Verifying integrity of {:?} with hash {}",
+            file_path,
+            expected_hash
+        );
         Err(InstallError::Download("Integrity verification not yet implemented".to_string()).into())
     }
 }

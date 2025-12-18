@@ -1,7 +1,7 @@
-use std::env;
-use std::fs;
 use crate::error::CudaMgrResult;
 use serde::{Deserialize, Serialize};
+use std::env;
+use std::fs;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WslVersion {
@@ -40,10 +40,10 @@ impl WslInfo {
         if let Ok(distro) = env::var("WSL_DISTRO_NAME") {
             is_wsl = true;
             distribution = distro;
-            
+
             // If we haven't determined version yet, default to WSL2 as it's modern standard
             if version == WslVersion::None {
-                version = WslVersion::Wsl2; 
+                version = WslVersion::Wsl2;
             }
         }
 

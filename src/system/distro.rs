@@ -89,31 +89,32 @@ impl DistroInfo {
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {
             Err(crate::error::SystemError::DistroDetection(
-                "Unsupported operating system".to_string()
-            ).into())
+                "Unsupported operating system".to_string(),
+            )
+            .into())
         }
     }
 
     #[cfg(target_os = "linux")]
     fn detect_linux() -> crate::error::CudaMgrResult<Self> {
         use std::fs;
-        
+
         let kernel_version = Self::detect_kernel_version();
-        
+
         // Try /etc/os-release first
         if let Ok(content) = fs::read_to_string("/etc/os-release") {
             let mut distro = Self::parse_os_release(&content)?;
             distro.kernel_version = kernel_version;
             return Ok(distro);
         }
-        
+
         // Fallback to /etc/lsb-release
         if let Ok(content) = fs::read_to_string("/etc/lsb-release") {
             let mut distro = Self::parse_lsb_release(&content)?;
             distro.kernel_version = kernel_version;
             return Ok(distro);
         }
-        
+
         // Last resort: generic Linux
         Ok(Self::new(
             OsType::Linux(LinuxDistro::Generic("unknown".to_string())),
@@ -128,15 +129,25 @@ impl DistroInfo {
     fn detect_windows() -> crate::error::CudaMgrResult<Self> {
         use winreg::enums::*;
         use winreg::RegKey;
-        
+
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        let cv = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
-            .map_err(|e| crate::error::SystemError::DistroDetection(format!("Failed to open registry: {}", e)))?;
-            
+        let cv = hklm
+            .open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
+            .map_err(|e| {
+                crate::error::SystemError::DistroDetection(format!(
+                    "Failed to open registry: {}",
+                    e
+                ))
+            })?;
+
         let product_name: String = cv.get_value("ProductName").unwrap_or("Windows".to_string());
-        let current_build: String = cv.get_value("CurrentBuild").unwrap_or("unknown".to_string());
-        let display_version: String = cv.get_value("DisplayVersion").unwrap_or("unknown".to_string());
-        
+        let current_build: String = cv
+            .get_value("CurrentBuild")
+            .unwrap_or("unknown".to_string());
+        let display_version: String = cv
+            .get_value("DisplayVersion")
+            .unwrap_or("unknown".to_string());
+
         // Windows 11 detection (since ProductName often still says "Windows 10")
         // Build number 22000+ is Windows 11
         let mut final_name = product_name.clone();
@@ -162,7 +173,7 @@ impl DistroInfo {
         let mut name = String::new();
         let mut version = String::new();
         let mut id = String::new();
-        
+
         for line in content.lines() {
             if let Some((key, value)) = line.split_once('=') {
                 let value = value.trim_matches('"');
@@ -174,7 +185,7 @@ impl DistroInfo {
                 }
             }
         }
-        
+
         let (distro, pkg_mgr) = match id.as_str() {
             "ubuntu" => (LinuxDistro::Ubuntu(version.clone()), PackageManager::Apt),
             "debian" => (LinuxDistro::Debian(version.clone()), PackageManager::Apt),
@@ -184,7 +195,7 @@ impl DistroInfo {
             "opensuse" | "suse" => (LinuxDistro::SUSE(version.clone()), PackageManager::Zypper),
             _ => (LinuxDistro::Generic(id), PackageManager::Unknown),
         };
-        
+
         Ok(Self::new(
             OsType::Linux(distro),
             name,
@@ -197,7 +208,7 @@ impl DistroInfo {
     pub fn parse_lsb_release(content: &str) -> crate::error::CudaMgrResult<Self> {
         let mut name = String::new();
         let mut version = String::new();
-        
+
         for line in content.lines() {
             if let Some((key, value)) = line.split_once('=') {
                 match key {
@@ -207,7 +218,7 @@ impl DistroInfo {
                 }
             }
         }
-        
+
         Ok(Self::new(
             OsType::Linux(LinuxDistro::Generic(name.clone())),
             name,
@@ -221,7 +232,7 @@ impl DistroInfo {
     #[cfg(target_os = "linux")]
     fn detect_kernel_version() -> Option<String> {
         use std::process::Command;
-        
+
         Command::new("uname")
             .arg("-r")
             .output()
@@ -235,7 +246,7 @@ impl DistroInfo {
     #[cfg(target_os = "windows")]
     fn detect_kernel_version() -> Option<String> {
         use std::process::Command;
-        
+
         Command::new("ver")
             .output()
             .ok()

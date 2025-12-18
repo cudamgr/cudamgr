@@ -1,5 +1,5 @@
-use std::io::{self, Write};
 use crate::cli::output::OutputFormatter;
+use std::io::{self, Write};
 
 /// Interactive prompts and user confirmations
 pub struct Interactive;
@@ -12,7 +12,7 @@ impl Interactive {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         let input = input.trim().to_lowercase();
         Ok(input == "y" || input == "yes")
     }
@@ -24,13 +24,13 @@ impl Interactive {
         } else {
             format!("❓ {} (y/N): ", message)
         };
-        
+
         print!("{}", prompt);
         io::stdout().flush()?;
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         let input = input.trim().to_lowercase();
         if input.is_empty() {
             Ok(default)
@@ -50,7 +50,7 @@ impl Interactive {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         match input.trim().parse::<usize>() {
             Ok(0) => Ok(None),
             Ok(n) if n <= options.len() => Ok(Some(n - 1)),
@@ -62,7 +62,10 @@ impl Interactive {
     }
 
     /// Ask user to select from a list with descriptions
-    pub fn select_with_description(message: &str, options: &[(String, String)]) -> io::Result<Option<usize>> {
+    pub fn select_with_description(
+        message: &str,
+        options: &[(String, String)],
+    ) -> io::Result<Option<usize>> {
         OutputFormatter::info(message);
         for (i, (option, description)) in options.iter().enumerate() {
             println!("  {}. {} - {}", i + 1, option, description);
@@ -72,7 +75,7 @@ impl Interactive {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         match input.trim().parse::<usize>() {
             Ok(0) => Ok(None),
             Ok(n) if n <= options.len() => Ok(Some(n - 1)),
@@ -139,7 +142,7 @@ impl Interactive {
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-        
+
         match input.trim().parse::<usize>() {
             Ok(0) => Ok(None),
             Ok(n) if n <= choices.len() => Ok(Some(n - 1)),

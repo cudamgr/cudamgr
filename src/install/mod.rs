@@ -1,11 +1,11 @@
+pub mod cleanup;
 pub mod downloader;
 pub mod installer;
 pub mod validator;
-pub mod cleanup;
 
-use std::path::PathBuf;
+use crate::error::{CudaMgrResult, InstallError};
 use serde::{Deserialize, Serialize};
-use crate::error::{InstallError, CudaMgrResult};
+use std::path::PathBuf;
 
 /// Installation plan containing all necessary information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,16 +38,25 @@ pub struct DefaultInstaller;
 impl Installer for DefaultInstaller {
     async fn create_plan(&self, _version: &str) -> CudaMgrResult<InstallationPlan> {
         // TODO: Implement installation plan creation
-        Err(InstallError::Installation("Installation planning not yet implemented".to_string()).into())
+        Err(
+            InstallError::Installation("Installation planning not yet implemented".to_string())
+                .into(),
+        )
     }
 
     async fn execute_plan(&self, _plan: &InstallationPlan) -> CudaMgrResult<()> {
         // TODO: Implement installation execution
-        Err(InstallError::Installation("Installation execution not yet implemented".to_string()).into())
+        Err(
+            InstallError::Installation("Installation execution not yet implemented".to_string())
+                .into(),
+        )
     }
 
     async fn validate_installation(&self, _path: &std::path::Path) -> CudaMgrResult<bool> {
         // TODO: Implement installation validation
-        Err(InstallError::Validation("Installation validation not yet implemented".to_string()).into())
+        Err(
+            InstallError::Validation("Installation validation not yet implemented".to_string())
+                .into(),
+        )
     }
 }

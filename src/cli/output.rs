@@ -107,28 +107,34 @@ impl ProgressBar {
         } else {
             0
         };
-        
+
         let elapsed = self.start_time.elapsed();
         let rate = if elapsed.as_secs() > 0 {
             self.current / elapsed.as_secs()
         } else {
             0
         };
-        
+
         // Create progress bar visualization
         let bar_width = 30usize;
         let filled = ((percentage * bar_width as u64) / 100) as usize;
         let empty = bar_width.saturating_sub(filled);
         let bar = "█".repeat(filled) + &"░".repeat(empty);
-        
-        print!("\r{}: [{}] {}% ({}/{}) {}B/s", 
-               self.message, bar, percentage, self.current, self.total, rate);
+
+        print!(
+            "\r{}: [{}] {}% ({}/{}) {}B/s",
+            self.message, bar, percentage, self.current, self.total, rate
+        );
         io::stdout().flush().unwrap();
     }
 
     pub fn finish(&self) {
         let elapsed = self.start_time.elapsed();
-        println!("\r{}: Complete ✅ (took {:.1}s)", self.message, elapsed.as_secs_f64());
+        println!(
+            "\r{}: Complete ✅ (took {:.1}s)",
+            self.message,
+            elapsed.as_secs_f64()
+        );
     }
 
     pub fn set_message(&mut self, message: String) {
@@ -169,12 +175,22 @@ impl Spinner {
     pub fn finish(&self, success: bool) {
         let elapsed = self.start_time.elapsed();
         let icon = if success { "✅" } else { "❌" };
-        println!("\r{} {} (took {:.1}s)", icon, self.message, elapsed.as_secs_f64());
+        println!(
+            "\r{} {} (took {:.1}s)",
+            icon,
+            self.message,
+            elapsed.as_secs_f64()
+        );
     }
 
     pub fn finish_with_message(&self, message: &str, success: bool) {
         let elapsed = self.start_time.elapsed();
         let icon = if success { "✅" } else { "❌" };
-        println!("\r{} {} (took {:.1}s)", icon, message, elapsed.as_secs_f64());
+        println!(
+            "\r{} {} (took {:.1}s)",
+            icon,
+            message,
+            elapsed.as_secs_f64()
+        );
     }
 }

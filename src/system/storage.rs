@@ -1,6 +1,6 @@
+use crate::error::{CudaMgrResult, SystemError};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-use crate::error::{SystemError, CudaMgrResult};
 
 /// Storage and disk space information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,22 +30,17 @@ impl StorageInfo {
     /// Detect storage information for a given path
     pub fn detect(install_path: &Path) -> CudaMgrResult<Self> {
         let path_str = install_path.to_string_lossy().to_string();
-        
+
         // Get disk space information
         let (available_bytes, total_bytes) = Self::get_disk_space(install_path)?;
-        
+
         let available_gb = available_bytes / (1024 * 1024 * 1024);
         let total_gb = total_bytes / (1024 * 1024 * 1024);
-        
+
         // CUDA typically requires 3-6 GB depending on version and components
         let required_gb = 6;
-        
-        Ok(Self::new(
-            available_gb,
-            total_gb,
-            path_str,
-            required_gb,
-        ))
+
+        Ok(Self::new(available_gb, total_gb, path_str, required_gb))
     }
 
     /// Get default CUDA installation path for the current platform
@@ -94,11 +89,14 @@ impl StorageInfo {
             .map_err(|e| SystemError::StorageCheck(format!("Invalid path: {}", e)))?;
 
         let mut statvfs: libc::statvfs = unsafe { mem::zeroed() };
-        
+
         let result = unsafe { libc::statvfs(path_cstring.as_ptr(), &mut statvfs) };
-        
+
         if result != 0 {
-            return Err(SystemError::StorageCheck("Failed to get filesystem statistics".to_string()).into());
+            return Err(SystemError::StorageCheck(
+                "Failed to get filesystem statistics".to_string(),
+            )
+            .into());
         }
 
         let block_size = statvfs.f_frsize as u64;
@@ -115,9 +113,10 @@ impl StorageInfo {
     #[cfg(windows)]
     fn get_disk_space_windows(path: &Path) -> CudaMgrResult<(u64, u64)> {
         use std::process::Command;
-        
+
         let path_buf = path.to_path_buf();
-        let drive_letter = path_buf.components()
+        let drive_letter = path_buf
+            .components()
             .next()
             .and_then(|c| c.as_os_str().to_str())
             .map(|s| s.trim_end_matches('\\').trim_end_matches('/'))
@@ -126,12 +125,12 @@ impl StorageInfo {
         // Powershell command: Get-Volume -DriveLetter C | Select-Object -Property SizeRemaining, Size
         // We strip the colon from drive letter for Get-Volume
         let drive_char = drive_letter.trim_end_matches(':');
-        
+
         let ps_command = format!(
             "Get-Volume -DriveLetter {} | Select-Object -Property SizeRemaining, Size | ConvertTo-Json", 
             drive_char
         );
-        
+
         let output = Command::new("powershell")
             .args(&["-NoProfile", "-Command", &ps_command])
             .output()
@@ -142,17 +141,18 @@ impl StorageInfo {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        
+
         // Output should be JSON: { "SizeRemaining": 12345, "Size": 67890 }
         #[derive(Deserialize)]
         struct VolumeInfo {
             SizeRemaining: u64,
             Size: u64,
         }
-        
-        let info: VolumeInfo = serde_json::from_str(&stdout)
-            .map_err(|e| SystemError::StorageCheck(format!("Failed to parse powershell output: {}", e)))?;
-            
+
+        let info: VolumeInfo = serde_json::from_str(&stdout).map_err(|e| {
+            SystemError::StorageCheck(format!("Failed to parse powershell output: {}", e))
+        })?;
+
         Ok((info.SizeRemaining, info.Size))
     }
 

@@ -1,7 +1,7 @@
 pub mod env;
 pub mod path;
-pub mod symlink;
 pub mod shell;
+pub mod symlink;
 pub mod types;
 
 pub use types::*;
@@ -9,9 +9,9 @@ pub use types::*;
 #[cfg(test)]
 mod tests;
 
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use crate::error::{ConfigError, CudaMgrResult};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Environment configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,12 +36,18 @@ pub struct DefaultConfigManager;
 impl ConfigManager for DefaultConfigManager {
     async fn apply_config(&self, _config: &EnvironmentConfig) -> CudaMgrResult<()> {
         // TODO: Implement configuration application
-        Err(ConfigError::Environment("Configuration application not yet implemented".to_string()).into())
+        Err(
+            ConfigError::Environment("Configuration application not yet implemented".to_string())
+                .into(),
+        )
     }
 
     async fn remove_config(&self, _version: &str) -> CudaMgrResult<()> {
         // TODO: Implement configuration removal
-        Err(ConfigError::Environment("Configuration removal not yet implemented".to_string()).into())
+        Err(
+            ConfigError::Environment("Configuration removal not yet implemented".to_string())
+                .into(),
+        )
     }
 
     async fn backup_config(&self) -> CudaMgrResult<PathBuf> {

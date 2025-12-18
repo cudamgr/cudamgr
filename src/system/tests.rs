@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::system::{driver::*, compiler::*, distro::*, storage::*, DefaultSystemChecker};
+    use crate::system::{compiler::*, distro::*, driver::*, storage::*, DefaultSystemChecker};
 
     #[test]
     fn test_system_checker_creation() {
@@ -12,13 +12,8 @@ mod tests {
 
     #[test]
     fn test_driver_info_creation() {
-        let driver = DriverInfo::new(
-            "470.86".to_string(),
-            true,
-            true,
-            Some("11.4".to_string()),
-        );
-        
+        let driver = DriverInfo::new("470.86".to_string(), true, true, Some("11.4".to_string()));
+
         assert_eq!(driver.version, "470.86");
         assert!(driver.is_installed);
         assert!(driver.supports_cuda);
@@ -27,30 +22,20 @@ mod tests {
 
     #[test]
     fn test_driver_cuda_version_support() {
-        let driver = DriverInfo::new(
-            "470.86".to_string(),
-            true,
-            true,
-            Some("11.4".to_string()),
-        );
-        
+        let driver = DriverInfo::new("470.86".to_string(), true, true, Some("11.4".to_string()));
+
         // Should support older versions
         assert!(driver.supports_cuda_version("11.0"));
         assert!(driver.supports_cuda_version("11.4"));
-        
+
         // Should not support newer versions
         assert!(!driver.supports_cuda_version("12.0"));
     }
 
     #[test]
     fn test_driver_no_cuda_support() {
-        let driver = DriverInfo::new(
-            "390.48".to_string(),
-            true,
-            false,
-            None,
-        );
-        
+        let driver = DriverInfo::new("390.48".to_string(), true, false, None);
+
         assert!(!driver.supports_cuda_version("11.0"));
     }
 
@@ -64,9 +49,18 @@ mod tests {
 
     #[test]
     fn test_driver_max_cuda_version_mapping() {
-        assert_eq!(DriverInfo::get_max_cuda_version("525.60.13"), Some("12.0".to_string()));
-        assert_eq!(DriverInfo::get_max_cuda_version("520.61.05"), Some("11.8".to_string()));
-        assert_eq!(DriverInfo::get_max_cuda_version("470.86"), Some("11.4".to_string()));
+        assert_eq!(
+            DriverInfo::get_max_cuda_version("525.60.13"),
+            Some("12.0".to_string())
+        );
+        assert_eq!(
+            DriverInfo::get_max_cuda_version("520.61.05"),
+            Some("11.8".to_string())
+        );
+        assert_eq!(
+            DriverInfo::get_max_cuda_version("470.86"),
+            Some("11.4".to_string())
+        );
         assert_eq!(DriverInfo::get_max_cuda_version("390.48"), None);
     }
 
@@ -78,7 +72,7 @@ mod tests {
             true,
             Some("/usr/bin/gcc".to_string()),
         );
-        
+
         assert_eq!(compiler.name, "GCC");
         assert_eq!(compiler.version, "9.4.0");
         assert!(compiler.is_compatible);
@@ -124,7 +118,7 @@ mod tests {
             Some("5.4.0-74-generic".to_string()),
             PackageManager::Apt,
         );
-        
+
         assert_eq!(distro.name, "Ubuntu");
         assert_eq!(distro.version, "20.04");
         assert_eq!(distro.kernel_version, Some("5.4.0-74-generic".to_string()));
@@ -148,7 +142,10 @@ UBUNTU_CODENAME=focal"#;
 
         let distro = DistroInfo::parse_os_release(content).unwrap();
         assert_eq!(distro.name, "Ubuntu");
-        assert!(matches!(distro.os_type, OsType::Linux(LinuxDistro::Ubuntu(_))));
+        assert!(matches!(
+            distro.os_type,
+            OsType::Linux(LinuxDistro::Ubuntu(_))
+        ));
         assert!(matches!(distro.package_manager, PackageManager::Apt));
     }
 
@@ -170,9 +167,9 @@ DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS""#;
             100, // 100 GB available
             500, // 500 GB total
             "/usr/local/cuda".to_string(),
-            6,   // 6 GB required
+            6, // 6 GB required
         );
-        
+
         assert_eq!(storage.available_space_gb, 100);
         assert_eq!(storage.total_space_gb, 500);
         assert_eq!(storage.install_path, "/usr/local/cuda");
@@ -185,9 +182,9 @@ DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS""#;
             2,   // 2 GB available
             500, // 500 GB total
             "/usr/local/cuda".to_string(),
-            6,   // 6 GB required
+            6, // 6 GB required
         );
-        
+
         assert!(!storage.has_sufficient_space);
         assert!(!storage.check_space_requirement(6));
         assert!(storage.check_space_requirement(1));
@@ -195,13 +192,8 @@ DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS""#;
 
     #[test]
     fn test_storage_format_space_info() {
-        let storage = StorageInfo::new(
-            100,
-            500,
-            "/usr/local/cuda".to_string(),
-            6,
-        );
-        
+        let storage = StorageInfo::new(100, 500, "/usr/local/cuda".to_string(), 6);
+
         let formatted = storage.format_space_info();
         assert_eq!(formatted, "100.0 GB available / 500.0 GB total");
     }
@@ -209,12 +201,15 @@ DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS""#;
     #[test]
     fn test_default_cuda_paths() {
         let path = StorageInfo::get_default_cuda_path();
-        
+
         #[cfg(target_os = "linux")]
         assert_eq!(path.to_string_lossy(), "/usr/local/cuda");
-        
+
         #[cfg(target_os = "windows")]
-        assert_eq!(path.to_string_lossy(), "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA");
+        assert_eq!(
+            path.to_string_lossy(),
+            "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA"
+        );
     }
 
     #[test]
@@ -222,7 +217,7 @@ DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS""#;
         let ubuntu = LinuxDistro::Ubuntu("20.04".to_string());
         let debian = LinuxDistro::Debian("11".to_string());
         let centos = LinuxDistro::CentOS("8".to_string());
-        
+
         assert!(matches!(ubuntu, LinuxDistro::Ubuntu(_)));
         assert!(matches!(debian, LinuxDistro::Debian(_)));
         assert!(matches!(centos, LinuxDistro::CentOS(_)));
@@ -248,7 +243,10 @@ REDHAT_SUPPORT_PRODUCT_VERSION="8""#;
 
         let distro = DistroInfo::parse_os_release(content).unwrap();
         assert!(matches!(distro.package_manager, PackageManager::Yum));
-        assert!(matches!(distro.os_type, OsType::Linux(LinuxDistro::CentOS(_))));
+        assert!(matches!(
+            distro.os_type,
+            OsType::Linux(LinuxDistro::CentOS(_))
+        ));
     }
 
     #[test]

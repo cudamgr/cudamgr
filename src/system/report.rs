@@ -1,8 +1,8 @@
-use std::fmt;
-use serde::{Deserialize, Serialize};
-use crate::error::CudaMgrResult;
-use super::SystemInfo;
 use super::cuda::{CudaDetectionResult, CudaInstallation};
+use super::SystemInfo;
+use crate::error::CudaMgrResult;
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Comprehensive system report for CUDA compatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,21 +33,22 @@ impl SystemReportGenerator {
     fn detect_system_info_sync() -> CudaMgrResult<SystemInfo> {
         // Detect GPU information
         let gpu = super::gpu::GpuInfo::detect().unwrap_or(None);
-        
+
         // Detect driver information
         let driver = super::driver::DriverInfo::detect().ok().flatten();
-        
+
         // Detect compiler information
-        let compiler = super::compiler::CompilerInfo::detect().ok()
+        let compiler = super::compiler::CompilerInfo::detect()
+            .ok()
             .and_then(|compilers| compilers.into_iter().find(|c| c.is_compatible));
-        
+
         // Detect distribution information
         let distro = super::distro::DistroInfo::detect()?;
-        
+
         // Detect storage information
         let storage_path = super::storage::StorageInfo::get_default_cuda_path();
         let storage = super::storage::StorageInfo::detect(&storage_path)?;
-        
+
         // Detect security information
         // Detect security information
         let security = super::security::SecurityInfo::detect()?;
@@ -57,7 +58,7 @@ impl SystemReportGenerator {
 
         // Detect Visual Studio (Windows only)
         let visual_studio = super::visual_studio::VisualStudioInfo::detect().unwrap_or(None);
-        
+
         Ok(SystemInfo {
             gpu,
             driver,
@@ -75,7 +76,7 @@ impl SystemReportGenerator {
         // Detect system information synchronously to avoid runtime conflicts
         let system_info = Self::detect_system_info_sync()?;
         let cuda_detection = CudaInstallation::detect_all_installations()?;
-        
+
         let mut recommendations = Vec::new();
         let mut warnings = Vec::new();
         let mut errors = Vec::new();
@@ -113,29 +114,38 @@ impl SystemReportGenerator {
 
         // Check WSL status
         if let Some(wsl) = &system_info.wsl {
-             if wsl.is_wsl {
-                 recommendations.push(format!("WSL Environment detected ({:?})", wsl.version));
-                 recommendations.push("Ensure NVIDIA Drivers are installed on the Windows HOST, not inside WSL".to_string());
-             }
+            if wsl.is_wsl {
+                recommendations.push(format!("WSL Environment detected ({:?})", wsl.version));
+                recommendations.push(
+                    "Ensure NVIDIA Drivers are installed on the Windows HOST, not inside WSL"
+                        .to_string(),
+                );
+            }
         }
 
         // Check Visual Studio on Windows
         if cfg!(target_os = "windows") {
-             match &system_info.visual_studio {
-                 Some(vs) => {
-                     if vs.is_installed {
-                         recommendations.push(format!("Visual Studio detected: {} ({})", vs.name, vs.version));
-                     } else {
-                         // Should not happen if Option is Some, but good for safety
-                     }
-                 }
-                 None => {
-                     // Only strictly an error if we are indeed on Windows and need to compile extensions
-                     // But for standard users, it's a strong recommendation/warning
-                     warnings.push("Visual Studio C++ Build Tools not found (Required for compiling CUDA kernels)".to_string());
-                     recommendations.push("Install Visual Studio with 'Desktop development with C++' workload".to_string());
-                 }
-             }
+            match &system_info.visual_studio {
+                Some(vs) => {
+                    if vs.is_installed {
+                        recommendations.push(format!(
+                            "Visual Studio detected: {} ({})",
+                            vs.name, vs.version
+                        ));
+                    } else {
+                        // Should not happen if Option is Some, but good for safety
+                    }
+                }
+                None => {
+                    // Only strictly an error if we are indeed on Windows and need to compile extensions
+                    // But for standard users, it's a strong recommendation/warning
+                    warnings.push("Visual Studio C++ Build Tools not found (Required for compiling CUDA kernels)".to_string());
+                    recommendations.push(
+                        "Install Visual Studio with 'Desktop development with C++' workload"
+                            .to_string(),
+                    );
+                }
+            }
         }
 
         // Check GPU compatibility
@@ -196,7 +206,9 @@ impl SystemReportGenerator {
             }
             None => {
                 errors.push("No compatible compiler detected".to_string());
-                recommendations.push("Install a compatible compiler (GCC on Linux, MSVC on Windows)".to_string());
+                recommendations.push(
+                    "Install a compatible compiler (GCC on Linux, MSVC on Windows)".to_string(),
+                );
                 has_errors = true;
             }
         }
@@ -233,15 +245,20 @@ impl SystemReportGenerator {
         }
 
         if system_info.security.secure_boot_enabled {
-            recommendations.push("Consider disabling Secure Boot if driver installation fails".to_string());
+            recommendations
+                .push("Consider disabling Secure Boot if driver installation fails".to_string());
         }
 
         // Check PATH configuration
-        let path_recommendations = system_info.security.path_configuration.get_recommendations();
+        let path_recommendations = system_info
+            .security
+            .path_configuration
+            .get_recommendations();
         recommendations.extend(path_recommendations);
 
         if system_info.security.has_path_conflicts() {
-            warnings.push("Conflicting CUDA paths detected in PATH environment variable".to_string());
+            warnings
+                .push("Conflicting CUDA paths detected in PATH environment variable".to_string());
             has_warnings = true;
         }
 
@@ -274,17 +291,18 @@ impl SystemReportGenerator {
         }
 
         // Check for hardware compatibility first
-        let hardware_compatible = system_info.gpu.is_some() 
-            && system_info.driver.is_some();
+        let hardware_compatible = system_info.gpu.is_some() && system_info.driver.is_some();
 
         // Determine overall compatibility status
         if has_errors {
             if hardware_compatible {
                 // Determine if errors are just missing prerequisites
-                let only_setup_errors = errors.iter().all(|e| 
-                    e.contains("required") || 
-                    e.contains("compiler") || 
-                    e.contains("Cannot install") // Admin error
+                let only_setup_errors = errors.iter().all(
+                    |e| {
+                        e.contains("required")
+                            || e.contains("compiler")
+                            || e.contains("Cannot install")
+                    }, // Admin error
                 );
 
                 if only_setup_errors {
@@ -314,15 +332,28 @@ impl fmt::Display for SystemReport {
 
         // System Information
         writeln!(f, "=== System Information ===")?;
-        if self.system_info.distro.version.starts_with(&self.system_info.distro.name) {
+        if self
+            .system_info
+            .distro
+            .version
+            .starts_with(&self.system_info.distro.name)
+        {
             writeln!(f, "OS: {}", self.system_info.distro.version)?;
         } else {
-            writeln!(f, "OS: {} {}", self.system_info.distro.name, self.system_info.distro.version)?;
+            writeln!(
+                f,
+                "OS: {} {}",
+                self.system_info.distro.name, self.system_info.distro.version
+            )?;
         }
-        
+
         if let Some(gpu) = &self.system_info.gpu {
-            let memory_str = gpu.memory_mb.map(|m| format!("{} MB", m)).unwrap_or_else(|| "Unknown".to_string());
-            let compute_str = gpu.compute_capability
+            let memory_str = gpu
+                .memory_mb
+                .map(|m| format!("{} MB", m))
+                .unwrap_or_else(|| "Unknown".to_string());
+            let compute_str = gpu
+                .compute_capability
                 .map(|(major, minor)| format!("Compute {}.{}", major, minor))
                 .unwrap_or_else(|| "Unknown".to_string());
             writeln!(f, "GPU: {} ({}, {})", gpu.name, memory_str, compute_str)?;
@@ -332,31 +363,57 @@ impl fmt::Display for SystemReport {
 
         if let Some(driver) = &self.system_info.driver {
             let cuda_version = driver.max_cuda_version.as_deref().unwrap_or("Unknown");
-            writeln!(f, "Driver: NVIDIA {} (Max CUDA {})", driver.version, cuda_version)?;
+            writeln!(
+                f,
+                "Driver: NVIDIA {} (Max CUDA {})",
+                driver.version, cuda_version
+            )?;
         } else {
             writeln!(f, "Driver: Not detected")?;
         }
 
         if let Some(compiler) = &self.system_info.compiler {
-            writeln!(f, "Compiler: {} {} (Compatible: {})", 
-                compiler.name, compiler.version, compiler.is_compatible)?;
+            writeln!(
+                f,
+                "Compiler: {} {} (Compatible: {})",
+                compiler.name, compiler.version, compiler.is_compatible
+            )?;
         } else {
             writeln!(f, "Compiler: Not detected")?;
         }
 
-        writeln!(f, "Storage: {} GB available", self.system_info.storage.available_space_gb)?;
-        writeln!(f, "Admin Privileges: {}", self.system_info.security.has_admin_privileges)?;
-        writeln!(f, "Secure Boot: {}", 
-            if self.system_info.security.secure_boot_enabled { "Enabled" } else { "Disabled" })?;
-        
+        writeln!(
+            f,
+            "Storage: {} GB available",
+            self.system_info.storage.available_space_gb
+        )?;
+        writeln!(
+            f,
+            "Admin Privileges: {}",
+            self.system_info.security.has_admin_privileges
+        )?;
+        writeln!(
+            f,
+            "Secure Boot: {}",
+            if self.system_info.security.secure_boot_enabled {
+                "Enabled"
+            } else {
+                "Disabled"
+            }
+        )?;
+
         if let Some(wsl) = &self.system_info.wsl {
-             if wsl.is_wsl {
-                 writeln!(f, "Environment: WSL ({:?}) - {}", wsl.version, wsl.distribution)?;
-             }
+            if wsl.is_wsl {
+                writeln!(
+                    f,
+                    "Environment: WSL ({:?}) - {}",
+                    wsl.version, wsl.distribution
+                )?;
+            }
         }
-        
+
         if let Some(vs) = &self.system_info.visual_studio {
-             writeln!(f, "Visual Studio: {} (v{})", vs.name, vs.version)?;
+            writeln!(f, "Visual Studio: {} (v{})", vs.name, vs.version)?;
         }
         writeln!(f)?;
 
@@ -364,10 +421,13 @@ impl fmt::Display for SystemReport {
         if !self.cuda_detection.installations.is_empty() {
             writeln!(f, "=== Existing CUDA Installations ===")?;
             for installation in &self.cuda_detection.installations {
-                writeln!(f, "  {} at {} ({} GB)", 
+                writeln!(
+                    f,
+                    "  {} at {} ({} GB)",
                     installation.version,
                     installation.install_path.display(),
-                    installation.size_bytes / (1024 * 1024 * 1024))?;
+                    installation.size_bytes / (1024 * 1024 * 1024)
+                )?;
             }
             writeln!(f)?;
         }
@@ -428,9 +488,13 @@ impl fmt::Display for CompatibilityStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CompatibilityStatus::Compatible => write!(f, "✅ Compatible"),
-            CompatibilityStatus::CompatibleWithWarnings => write!(f, "⚠️  Compatible (with warnings)"),
+            CompatibilityStatus::CompatibleWithWarnings => {
+                write!(f, "⚠️  Compatible (with warnings)")
+            }
             CompatibilityStatus::Incompatible => write!(f, "❌ Incompatible"),
-            CompatibilityStatus::PrerequisitesMissing => write!(f, "⚠️  Compatible (Prerequisites Missing)"),
+            CompatibilityStatus::PrerequisitesMissing => {
+                write!(f, "⚠️  Compatible (Prerequisites Missing)")
+            }
             CompatibilityStatus::Unknown => write!(f, "❓ Unknown"),
         }
     }
@@ -439,9 +503,15 @@ impl fmt::Display for CompatibilityStatus {
 impl fmt::Display for super::cuda::ConflictType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            super::cuda::ConflictType::MultipleVersionsInPath => write!(f, "Multiple Versions in PATH"),
-            super::cuda::ConflictType::EnvironmentVariableMismatch => write!(f, "Environment Variable Mismatch"),
-            super::cuda::ConflictType::SystemPackageConflict => write!(f, "System Package Conflict"),
+            super::cuda::ConflictType::MultipleVersionsInPath => {
+                write!(f, "Multiple Versions in PATH")
+            }
+            super::cuda::ConflictType::EnvironmentVariableMismatch => {
+                write!(f, "Environment Variable Mismatch")
+            }
+            super::cuda::ConflictType::SystemPackageConflict => {
+                write!(f, "System Package Conflict")
+            }
             super::cuda::ConflictType::SymlinkConflict => write!(f, "Symlink Conflict"),
         }
     }

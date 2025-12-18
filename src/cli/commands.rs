@@ -1,7 +1,7 @@
-use clap::Subcommand;
-use async_trait::async_trait;
-use crate::error::{CudaMgrResult, CudaMgrError};
 use crate::cli::output::OutputFormatter;
+use crate::error::{CudaMgrError, CudaMgrResult};
+use async_trait::async_trait;
+use clap::Subcommand;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -50,12 +50,14 @@ impl InstallArgs {
         if self.version.is_empty() {
             return Err(CudaMgrError::Cli("Version cannot be empty".to_string()));
         }
-        
+
         // Basic version format validation (e.g., "11.8", "12.0")
         if !self.version.chars().all(|c| c.is_ascii_digit() || c == '.') {
-            return Err(CudaMgrError::Cli("Invalid version format. Use format like '11.8' or '12.0'".to_string()));
+            return Err(CudaMgrError::Cli(
+                "Invalid version format. Use format like '11.8' or '12.0'".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -74,12 +76,14 @@ impl UseArgs {
         if self.version.is_empty() {
             return Err(CudaMgrError::Cli("Version cannot be empty".to_string()));
         }
-        
+
         // Basic version format validation
         if !self.version.chars().all(|c| c.is_ascii_digit() || c == '.') {
-            return Err(CudaMgrError::Cli("Invalid version format. Use format like '11.8' or '12.0'".to_string()));
+            return Err(CudaMgrError::Cli(
+                "Invalid version format. Use format like '11.8' or '12.0'".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -115,12 +119,14 @@ impl UninstallArgs {
         if self.version.is_empty() {
             return Err(CudaMgrError::Cli("Version cannot be empty".to_string()));
         }
-        
+
         // Basic version format validation
         if !self.version.chars().all(|c| c.is_ascii_digit() || c == '.') {
-            return Err(CudaMgrError::Cli("Invalid version format. Use format like '11.8' or '12.0'".to_string()));
+            return Err(CudaMgrError::Cli(
+                "Invalid version format. Use format like '11.8' or '12.0'".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -138,13 +144,17 @@ pub struct LogsArgs {
 impl LogsArgs {
     pub fn validate(&self) -> CudaMgrResult<()> {
         if self.lines == 0 {
-            return Err(CudaMgrError::Cli("Number of lines must be greater than 0".to_string()));
+            return Err(CudaMgrError::Cli(
+                "Number of lines must be greater than 0".to_string(),
+            ));
         }
-        
+
         if self.lines > 10000 {
-            return Err(CudaMgrError::Cli("Number of lines cannot exceed 10000".to_string()));
+            return Err(CudaMgrError::Cli(
+                "Number of lines cannot exceed 10000".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -165,7 +175,7 @@ impl CommandRouter {
     pub async fn route(command: Command) -> CudaMgrResult<()> {
         // Validate command before execution
         command.validate()?;
-        
+
         // Route to appropriate handler
         match command {
             Command::Doctor(args) => DoctorHandler::new(args).execute().await,
@@ -182,7 +192,7 @@ impl Command {
     pub async fn execute(self) -> CudaMgrResult<()> {
         CommandRouter::route(self).await
     }
-    
+
     pub fn validate(&self) -> CudaMgrResult<()> {
         match self {
             Command::Doctor(args) => args.validate(),
@@ -210,13 +220,13 @@ impl DoctorHandler {
 impl CommandHandler for DoctorHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         use crate::system::SystemReportGenerator;
-        
+
         tracing::info!("Running system doctor with verbose: {}", self.args.verbose);
         OutputFormatter::info("Running comprehensive system compatibility check...");
-        
+
         // Generate comprehensive system report
         let report = SystemReportGenerator::generate_report().await?;
-        
+
         // Display the report
         if self.args.verbose {
             // In verbose mode, show the full report
@@ -225,7 +235,7 @@ impl CommandHandler for DoctorHandler {
             // In normal mode, show a summary
             Self::display_summary(&report);
         }
-        
+
         // Return success/failure based on compatibility status
         match report.compatibility_status {
             crate::system::CompatibilityStatus::Compatible => {
@@ -238,12 +248,16 @@ impl CommandHandler for DoctorHandler {
             }
             crate::system::CompatibilityStatus::Incompatible => {
                 OutputFormatter::error("System is not compatible with CUDA installation");
-                Err(CudaMgrError::System(crate::error::SystemError::Incompatible(
-                    "System compatibility check failed".to_string()
-                )))
+                Err(CudaMgrError::System(
+                    crate::error::SystemError::Incompatible(
+                        "System compatibility check failed".to_string(),
+                    ),
+                ))
             }
             crate::system::CompatibilityStatus::PrerequisitesMissing => {
-                OutputFormatter::warning("System is compatible but requires setup (Admin/Compiler)");
+                OutputFormatter::warning(
+                    "System is compatible but requires setup (Admin/Compiler)",
+                );
                 Ok(())
             }
             crate::system::CompatibilityStatus::Unknown => {
@@ -258,14 +272,17 @@ impl DoctorHandler {
     /// Display a summary of the system report
     fn display_summary(report: &crate::system::SystemReport) {
         println!("=== CUDA System Compatibility Summary ===\n");
-        
+
         // Overall status
         println!("Status: {}\n", report.compatibility_status);
-        
+
         // Key system info
         println!("System Information:");
-        println!("  OS: {} {}", report.system_info.distro.name, report.system_info.distro.version);
-        
+        println!(
+            "  OS: {} {}",
+            report.system_info.distro.name, report.system_info.distro.version
+        );
+
         if let Some(gpu) = &report.system_info.gpu {
             if let Some((major, minor)) = gpu.compute_capability {
                 println!("  GPU: {} (Compute {}.{})", gpu.name, major, minor);
@@ -275,33 +292,53 @@ impl DoctorHandler {
         } else {
             println!("  GPU: ❌ Not detected");
         }
-        
+
         if let Some(driver) = &report.system_info.driver {
             println!("  Driver: ✅ NVIDIA {}", driver.version);
         } else {
             println!("  Driver: ❌ Not detected");
         }
-        
+
         if let Some(compiler) = &report.system_info.compiler {
-            println!("  Compiler: {} {} {}", 
-                if compiler.is_compatible { "✅" } else { "⚠️" },
-                compiler.name, 
-                compiler.version);
+            println!(
+                "  Compiler: {} {} {}",
+                if compiler.is_compatible {
+                    "✅"
+                } else {
+                    "⚠️"
+                },
+                compiler.name,
+                compiler.version
+            );
         } else {
             println!("  Compiler: ❌ Not detected");
         }
-        
-        println!("  Storage: {} GB available", report.system_info.storage.available_space_gb);
-        println!("  Admin: {}", if report.system_info.security.has_admin_privileges { "✅" } else { "❌" });
-        
+
+        println!(
+            "  Storage: {} GB available",
+            report.system_info.storage.available_space_gb
+        );
+        println!(
+            "  Admin: {}",
+            if report.system_info.security.has_admin_privileges {
+                "✅"
+            } else {
+                "❌"
+            }
+        );
+
         // CUDA installations
         if !report.cuda_detection.installations.is_empty() {
             println!("\nExisting CUDA Installations:");
             for installation in &report.cuda_detection.installations {
-                println!("  {} at {}", installation.version, installation.install_path.display());
+                println!(
+                    "  {} at {}",
+                    installation.version,
+                    installation.install_path.display()
+                );
             }
         }
-        
+
         // Show critical errors
         if !report.errors.is_empty() {
             println!("\nCritical Issues:");
@@ -309,7 +346,7 @@ impl DoctorHandler {
                 println!("  ❌ {}", error);
             }
         }
-        
+
         // Show warnings
         if !report.warnings.is_empty() {
             println!("\nWarnings:");
@@ -317,7 +354,7 @@ impl DoctorHandler {
                 println!("  ⚠️  {}", warning);
             }
         }
-        
+
         // Show key recommendations
         if !report.recommendations.is_empty() {
             println!("\nNext Steps:");
@@ -325,11 +362,13 @@ impl DoctorHandler {
                 println!("  {}. {}", i + 1, recommendation);
             }
             if report.recommendations.len() > 3 {
-                println!("  ... and {} more (use --verbose for full details)", 
-                    report.recommendations.len() - 3);
+                println!(
+                    "  ... and {} more (use --verbose for full details)",
+                    report.recommendations.len() - 3
+                );
             }
         }
-        
+
         println!("\nRun 'cudamgr doctor --verbose' for detailed information.");
     }
 }
@@ -349,10 +388,12 @@ impl CommandHandler for InstallHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Installing CUDA version: {}", self.args.version);
         OutputFormatter::info(&format!("Installing CUDA version {}", self.args.version));
-        
+
         // TODO: Implement actual install functionality
         OutputFormatter::warning("Install command implementation pending");
-        Err(CudaMgrError::Cli("Install command not yet implemented".to_string()))
+        Err(CudaMgrError::Cli(
+            "Install command not yet implemented".to_string(),
+        ))
     }
 }
 
@@ -371,10 +412,12 @@ impl CommandHandler for UseHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Switching to CUDA version: {}", self.args.version);
         OutputFormatter::info(&format!("Switching to CUDA version {}", self.args.version));
-        
+
         // TODO: Implement actual use functionality
         OutputFormatter::warning("Use command implementation pending");
-        Err(CudaMgrError::Cli("Use command not yet implemented".to_string()))
+        Err(CudaMgrError::Cli(
+            "Use command not yet implemented".to_string(),
+        ))
     }
 }
 
@@ -393,10 +436,12 @@ impl CommandHandler for ListHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Listing CUDA versions, available: {}", self.args.available);
         OutputFormatter::info("Listing CUDA versions...");
-        
+
         // TODO: Implement actual list functionality
         OutputFormatter::warning("List command implementation pending");
-        Err(CudaMgrError::Cli("List command not yet implemented".to_string()))
+        Err(CudaMgrError::Cli(
+            "List command not yet implemented".to_string(),
+        ))
     }
 }
 
@@ -415,10 +460,12 @@ impl CommandHandler for UninstallHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Uninstalling CUDA version: {}", self.args.version);
         OutputFormatter::info(&format!("Uninstalling CUDA version {}", self.args.version));
-        
+
         // TODO: Implement actual uninstall functionality
         OutputFormatter::warning("Uninstall command implementation pending");
-        Err(CudaMgrError::Cli("Uninstall command not yet implemented".to_string()))
+        Err(CudaMgrError::Cli(
+            "Uninstall command not yet implemented".to_string(),
+        ))
     }
 }
 
@@ -437,9 +484,11 @@ impl CommandHandler for LogsHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Showing {} log lines", self.args.lines);
         OutputFormatter::info(&format!("Showing {} log lines", self.args.lines));
-        
+
         // TODO: Implement actual logs functionality
         OutputFormatter::warning("Logs command implementation pending");
-        Err(CudaMgrError::Cli("Logs command not yet implemented".to_string()))
+        Err(CudaMgrError::Cli(
+            "Logs command not yet implemented".to_string(),
+        ))
     }
 }

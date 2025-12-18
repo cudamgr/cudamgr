@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-use std::fs;
-use std::process::Command;
+use crate::error::{CudaMgrResult, SystemError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::error::{CudaMgrResult, SystemError};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CudaInstallation {
@@ -70,7 +70,7 @@ pub enum ConflictType {
 impl CudaInstallation {
     pub fn new(version: String, install_path: PathBuf) -> Self {
         let toolkit_path = install_path.join("bin");
-        
+
         Self {
             version,
             install_path,
@@ -92,7 +92,7 @@ impl CudaInstallation {
 
         let bin_path = path.join("bin");
         let nvcc_path = bin_path.join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
-        
+
         if !nvcc_path.exists() {
             return Ok(None);
         }
@@ -100,13 +100,13 @@ impl CudaInstallation {
         // Get version from nvcc
         let version = Self::get_nvcc_version(&nvcc_path)?;
         let mut installation = Self::new(version, path.to_path_buf());
-        
+
         // Detect components
         installation.components = Self::detect_components(path)?;
-        
+
         // Calculate size
         installation.size_bytes = Self::calculate_directory_size(path)?;
-        
+
         // Try to get install date from directory metadata
         if let Ok(metadata) = fs::metadata(path) {
             if let Ok(created) = metadata.created() {
@@ -129,7 +129,7 @@ impl CudaInstallation {
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        
+
         // Parse version from output like "Cuda compilation tools, release 11.8, V11.8.89"
         for line in output_str.lines() {
             if line.contains("release") {
@@ -163,7 +163,7 @@ impl CudaInstallation {
         for (name, relative_path, required) in essential_components {
             let component_path = install_path.join(relative_path);
             let exists = component_path.exists();
-            
+
             // On Windows, try .dll extension
             let component_path = if !exists && cfg!(windows) {
                 let dll_path = install_path.join(relative_path.replace(".so", ".dll"));
@@ -215,7 +215,7 @@ impl CudaInstallation {
 
         // Common CUDA installation paths
         let common_paths = Self::get_common_cuda_paths();
-        
+
         for path in common_paths {
             if let Some(installation) = Self::detect_from_path(&path)? {
                 installations.push(installation);
@@ -249,7 +249,10 @@ impl CudaInstallation {
             ]);
 
             // Version-specific paths
-            for version in ["12.3", "12.2", "12.1", "12.0", "11.8", "11.7", "11.6", "11.5", "11.4", "11.3", "11.2", "11.1", "11.0"] {
+            for version in [
+                "12.3", "12.2", "12.1", "12.0", "11.8", "11.7", "11.6", "11.5", "11.4", "11.3",
+                "11.2", "11.1", "11.0",
+            ] {
                 paths.push(PathBuf::from(format!("/usr/local/cuda-{}", version)));
                 paths.push(PathBuf::from(format!("/opt/cuda-{}", version)));
             }
@@ -259,13 +262,25 @@ impl CudaInstallation {
         {
             // Standard Windows paths
             if let Ok(program_files) = std::env::var("ProgramFiles") {
-                paths.push(PathBuf::from(program_files).join("NVIDIA GPU Computing Toolkit").join("CUDA"));
+                paths.push(
+                    PathBuf::from(program_files)
+                        .join("NVIDIA GPU Computing Toolkit")
+                        .join("CUDA"),
+                );
             }
-            
+
             // Version-specific paths
-            for version in ["v12.3", "v12.2", "v12.1", "v12.0", "v11.8", "v11.7", "v11.6", "v11.5", "v11.4", "v11.3", "v11.2", "v11.1", "v11.0"] {
+            for version in [
+                "v12.3", "v12.2", "v12.1", "v12.0", "v11.8", "v11.7", "v11.6", "v11.5", "v11.4",
+                "v11.3", "v11.2", "v11.1", "v11.0",
+            ] {
                 if let Ok(program_files) = std::env::var("ProgramFiles") {
-                    paths.push(PathBuf::from(program_files).join("NVIDIA GPU Computing Toolkit").join("CUDA").join(version));
+                    paths.push(
+                        PathBuf::from(program_files)
+                            .join("NVIDIA GPU Computing Toolkit")
+                            .join("CUDA")
+                            .join(version),
+                    );
                 }
             }
         }
@@ -284,20 +299,18 @@ impl CudaInstallation {
     /// Detect system-wide CUDA installation (from PATH)
     fn detect_system_cuda() -> CudaMgrResult<Option<SystemCudaInfo>> {
         // Try to find nvcc in PATH
-        let nvcc_output = Command::new("nvcc")
-            .arg("--version")
-            .output();
+        let nvcc_output = Command::new("nvcc").arg("--version").output();
 
         let (nvcc_version, nvcc_path) = if let Ok(output) = nvcc_output {
             if output.status.success() {
                 let version_str = String::from_utf8_lossy(&output.stdout);
                 let version = Self::parse_nvcc_version_output(&version_str)?;
-                
+
                 // Try to find nvcc path
                 let which_output = Command::new(if cfg!(windows) { "where" } else { "which" })
                     .arg("nvcc")
                     .output();
-                
+
                 let path = if let Ok(which_out) = which_output {
                     if which_out.status.success() {
                         let path_str = String::from_utf8_lossy(&which_out.stdout);
@@ -344,7 +357,10 @@ impl CudaInstallation {
     }
 
     /// Detect conflicts between CUDA installations
-    fn detect_conflicts(installations: &[CudaInstallation], system_cuda: &Option<SystemCudaInfo>) -> CudaMgrResult<Vec<CudaConflict>> {
+    fn detect_conflicts(
+        installations: &[CudaInstallation],
+        system_cuda: &Option<SystemCudaInfo>,
+    ) -> CudaMgrResult<Vec<CudaConflict>> {
         let mut conflicts = Vec::new();
 
         // Check for multiple versions in PATH
@@ -354,22 +370,27 @@ impl CudaInstallation {
                 conflict_type: ConflictType::MultipleVersionsInPath,
                 description: "Multiple CUDA versions detected on system".to_string(),
                 affected_installations: versions,
-                resolution_suggestion: "Use cudamgr to manage CUDA versions and ensure only one is active".to_string(),
+                resolution_suggestion:
+                    "Use cudamgr to manage CUDA versions and ensure only one is active".to_string(),
             });
         }
 
         // Check for environment variable mismatches
         if let Ok(cuda_home) = std::env::var("CUDA_HOME") {
             let cuda_home_path = PathBuf::from(cuda_home);
-            let matching_installation = installations.iter()
+            let matching_installation = installations
+                .iter()
                 .find(|inst| inst.install_path == cuda_home_path);
-            
+
             if matching_installation.is_none() && !installations.is_empty() {
                 conflicts.push(CudaConflict {
                     conflict_type: ConflictType::EnvironmentVariableMismatch,
-                    description: "CUDA_HOME points to different installation than detected versions".to_string(),
+                    description:
+                        "CUDA_HOME points to different installation than detected versions"
+                            .to_string(),
                     affected_installations: vec!["CUDA_HOME".to_string()],
-                    resolution_suggestion: "Update CUDA_HOME to point to desired CUDA installation".to_string(),
+                    resolution_suggestion: "Update CUDA_HOME to point to desired CUDA installation"
+                        .to_string(),
                 });
             }
         }
@@ -378,13 +399,18 @@ impl CudaInstallation {
     }
 
     pub fn is_valid(&self) -> bool {
-        self.install_path.exists() && 
-        self.toolkit_path.exists() &&
-        !self.components.iter().filter(|c| c.required).any(|c| !c.path.exists())
+        self.install_path.exists()
+            && self.toolkit_path.exists()
+            && !self
+                .components
+                .iter()
+                .filter(|c| c.required)
+                .any(|c| !c.path.exists())
     }
 
     pub fn get_nvcc_path(&self) -> PathBuf {
-        self.toolkit_path.join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" })
+        self.toolkit_path
+            .join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" })
     }
 
     pub fn get_lib_path(&self) -> PathBuf {

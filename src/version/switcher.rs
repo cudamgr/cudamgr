@@ -1,4 +1,4 @@
-use crate::error::{VersionError, CudaMgrResult};
+use crate::error::{CudaMgrResult, VersionError};
 
 /// Version switching functionality
 pub struct VersionSwitcher;
@@ -34,7 +34,10 @@ impl VersionSwitcher {
     pub async fn verify_switch(&self, version: &str) -> CudaMgrResult<bool> {
         // TODO: Implement switch verification
         tracing::info!("Verifying switch to version {}", version);
-        Err(VersionError::SwitchFailed("Switch verification not yet implemented".to_string()).into())
+        Err(
+            VersionError::SwitchFailed("Switch verification not yet implemented".to_string())
+                .into(),
+        )
     }
 }
 

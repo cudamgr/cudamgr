@@ -1,9 +1,9 @@
-use std::path::Path;
-use std::fs;
-use serde::{Deserialize, Serialize};
 use crate::error::CudaMgrResult;
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
 use crate::error::SystemError;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
 
 /// Security and permission information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,7 +67,7 @@ impl SecurityInfo {
             .as_ref()
             .map(|sb| sb.enabled)
             .unwrap_or(false);
-        
+
         let has_admin_privileges = Self::detect_admin_privileges();
         let can_install_drivers = has_admin_privileges && Self::can_install_drivers_check();
         let path_configuration = Self::detect_path_configuration()?;
@@ -86,19 +86,22 @@ impl SecurityInfo {
     fn detect_secure_boot_details() -> CudaMgrResult<SecureBootInfo> {
         #[cfg(target_os = "linux")]
         {
-            let secure_boot_enabled = Self::read_efi_var("SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c")
-                .map(|data| data.get(4).copied().unwrap_or(0) == 1)
-                .unwrap_or(false);
-            
+            let secure_boot_enabled =
+                Self::read_efi_var("SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c")
+                    .map(|data| data.get(4).copied().unwrap_or(0) == 1)
+                    .unwrap_or(false);
+
             let setup_mode = Self::read_efi_var("SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c")
                 .map(|data| data.get(4).copied().unwrap_or(0) == 1)
                 .unwrap_or(false);
-            
+
             let vendor_keys = Self::read_efi_var("VendorKeys-8be4df61-93ca-11d2-aa0d-00e098032b8c")
                 .map(|data| data.get(4).copied().unwrap_or(0) == 1)
                 .unwrap_or(false);
-            
-            let platform_key_present = Path::new("/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c").exists();
+
+            let platform_key_present =
+                Path::new("/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c")
+                    .exists();
 
             Ok(SecureBootInfo {
                 enabled: secure_boot_enabled,
@@ -119,9 +122,11 @@ impl SecurityInfo {
 
             let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
             let sb_key = hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State");
-            
+
             let enabled = if let Ok(key) = sb_key {
-                key.get_value::<u32, _>("UEFISecureBootEnabled").unwrap_or(0) == 1
+                key.get_value::<u32, _>("UEFISecureBootEnabled")
+                    .unwrap_or(0)
+                    == 1
             } else {
                 false
             };
@@ -137,7 +142,10 @@ impl SecurityInfo {
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {
-            Err(SystemError::UnsupportedPlatform("Secure Boot detection not supported on this platform".to_string()).into())
+            Err(SystemError::UnsupportedPlatform(
+                "Secure Boot detection not supported on this platform".to_string(),
+            )
+            .into())
         }
     }
 
@@ -170,8 +178,7 @@ impl SecurityInfo {
         #[cfg(target_os = "linux")]
         {
             // Check if we can access kernel module directories
-            Path::new("/lib/modules").exists() && 
-            Path::new("/sys/module").exists()
+            Path::new("/lib/modules").exists() && Path::new("/sys/module").exists()
         }
         #[cfg(target_os = "windows")]
         {
@@ -197,13 +204,14 @@ impl SecurityInfo {
             if let Ok(fw_type) = std::env::var("FIRMWARE_TYPE") {
                 return fw_type.to_uppercase() == "UEFI";
             }
-            
+
             // Fallback: Check if SecureBoot registry key exists (only on UEFI)
             use winreg::enums::*;
             use winreg::RegKey;
-            
+
             let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-            hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State").is_ok()
+            hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State")
+                .is_ok()
         }
         #[cfg(not(any(target_os = "linux", target_os = "windows")))]
         {
@@ -223,7 +231,7 @@ impl SecurityInfo {
             .or_else(|_| std::env::var("CUDA_PATH"))
             .ok()
             .map(std::path::PathBuf::from);
-        
+
         let cuda_home_set = cuda_home_path.is_some();
 
         // Look for CUDA-related paths in PATH
@@ -233,7 +241,7 @@ impl SecurityInfo {
         for path_entry in &path_entries {
             if Self::is_cuda_path(path_entry) {
                 cuda_in_path = true;
-                
+
                 // Check if this is a different CUDA installation
                 if let Some(ref cuda_home) = cuda_home_path {
                     if !path_entry.starts_with(cuda_home) {
@@ -258,9 +266,9 @@ impl SecurityInfo {
     /// Check if a path entry appears to be CUDA-related
     fn is_cuda_path(path: &Path) -> bool {
         let path_str = path.to_string_lossy().to_lowercase();
-        path_str.contains("cuda") || 
-        path_str.contains("nvcc") ||
-        (path.join("nvcc").exists() || path.join("nvcc.exe").exists())
+        path_str.contains("cuda")
+            || path_str.contains("nvcc")
+            || (path.join("nvcc").exists() || path.join("nvcc.exe").exists())
     }
 
     /// Check if system allows driver installation
@@ -286,7 +294,9 @@ impl SecurityInfo {
         }
 
         if self.secure_boot_enabled {
-            issues.push("Secure Boot is enabled - may prevent unsigned driver installation".to_string());
+            issues.push(
+                "Secure Boot is enabled - may prevent unsigned driver installation".to_string(),
+            );
         }
 
         if self.has_path_conflicts() {
@@ -325,9 +335,9 @@ impl SecureBootInfo {
 impl PathConfigInfo {
     /// Check if PATH configuration is optimal for CUDA
     pub fn is_optimal(&self) -> bool {
-        self.cuda_home_set && 
-        self.conflicting_cuda_paths.is_empty() &&
-        (self.cuda_in_path || !self.cuda_home_set)
+        self.cuda_home_set
+            && self.conflicting_cuda_paths.is_empty()
+            && (self.cuda_in_path || !self.cuda_home_set)
     }
 
     /// Get recommendations for PATH configuration

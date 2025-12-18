@@ -97,28 +97,28 @@ mod tests {
     async fn test_doctor_command_integration() {
         // Test that doctor command can generate a system report
         let result = SystemReportGenerator::generate_report().await;
-        
+
         // The command should not panic, even if system is not compatible
         match result {
             Ok(report) => {
                 // Verify report structure
                 assert!(matches!(
                     report.compatibility_status,
-                    CompatibilityStatus::Compatible |
-                    CompatibilityStatus::CompatibleWithWarnings |
-                    CompatibilityStatus::Incompatible |
-                    CompatibilityStatus::PrerequisitesMissing |
-                    CompatibilityStatus::Unknown
+                    CompatibilityStatus::Compatible
+                        | CompatibilityStatus::CompatibleWithWarnings
+                        | CompatibilityStatus::Incompatible
+                        | CompatibilityStatus::PrerequisitesMissing
+                        | CompatibilityStatus::Unknown
                 ));
-                
+
                 // Report should have system info
                 assert!(!report.system_info.distro.name.is_empty());
-                
+
                 // Should have some form of output (recommendations, warnings, or errors)
                 assert!(
-                    !report.recommendations.is_empty() ||
-                    !report.warnings.is_empty() ||
-                    !report.errors.is_empty()
+                    !report.recommendations.is_empty()
+                        || !report.warnings.is_empty()
+                        || !report.errors.is_empty()
                 );
             }
             Err(_) => {
@@ -131,10 +131,10 @@ mod tests {
     #[tokio::test]
     async fn test_doctor_handler_execution() {
         let handler = DoctorHandler::new(DoctorArgs { verbose: false });
-        
+
         // Execute the handler - it should not panic
         let result = handler.execute().await;
-        
+
         // In a test environment, we expect either success or a controlled failure
         match result {
             Ok(_) => {
@@ -159,13 +159,13 @@ mod tests {
     fn test_cuda_detection_integration() {
         // Test CUDA detection functionality
         let result = CudaInstallation::detect_all_installations();
-        
+
         match result {
             Ok(detection) => {
                 // Should return a valid detection result
                 assert!(detection.installations.len() >= 0); // Can be empty
                 assert!(detection.conflicts.len() >= 0); // Can be empty
-                
+
                 // If installations are found, they should be valid or invalid (not panic)
                 for installation in &detection.installations {
                     let _ = installation.is_valid(); // Should not panic
@@ -181,16 +181,16 @@ mod tests {
     fn test_security_info_detection() {
         // Test security information detection
         let result = SecurityInfo::detect();
-        
+
         match result {
             Ok(security_info) => {
                 // Should have valid security information
                 assert!(security_info.path_configuration.path_entries.len() >= 0);
-                
+
                 // Security issues should be a valid list
                 let issues = security_info.get_security_issues();
                 assert!(issues.len() >= 0);
-                
+
                 // PATH configuration should have valid recommendations
                 let recommendations = security_info.path_configuration.get_recommendations();
                 assert!(recommendations.len() >= 0);
@@ -205,7 +205,7 @@ mod tests {
     fn test_system_report_display() {
         // Test that system report can be formatted for display
         use std::fmt::Write;
-        
+
         // Create a minimal system report for testing
         let system_info = SystemInfo {
             gpu: None,
@@ -241,13 +241,13 @@ mod tests {
             wsl: None,
             visual_studio: None,
         };
-        
+
         let cuda_detection = CudaDetectionResult {
             installations: Vec::new(),
             conflicts: Vec::new(),
             system_cuda: None,
         };
-        
+
         let report = SystemReport {
             system_info,
             cuda_detection,
@@ -256,11 +256,11 @@ mod tests {
             warnings: vec!["Test warning".to_string()],
             errors: vec!["Test error".to_string()],
         };
-        
+
         // Test that the report can be formatted without panicking
         let mut output = String::new();
         write!(&mut output, "{}", report).expect("Report formatting should not fail");
-        
+
         // Verify the output contains expected sections
         assert!(output.contains("CUDA System Compatibility Report"));
         assert!(output.contains("System Information"));

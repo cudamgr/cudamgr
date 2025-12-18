@@ -1,6 +1,6 @@
+use crate::error::{CudaMgrResult, SystemError};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use crate::error::{SystemError, CudaMgrResult};
 
 /// Compiler information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,12 +13,7 @@ pub struct CompilerInfo {
 
 impl CompilerInfo {
     /// Create a new CompilerInfo instance
-    pub fn new(
-        name: String,
-        version: String,
-        is_compatible: bool,
-        path: Option<String>,
-    ) -> Self {
+    pub fn new(name: String, version: String, is_compatible: bool, path: Option<String>) -> Self {
         Self {
             name,
             version,
@@ -69,16 +64,11 @@ impl CompilerInfo {
 
         let version = Self::parse_gcc_version(&output_str)?;
         let is_compatible = Self::is_gcc_compatible(&version);
-        
+
         // Get gcc path
         let path = Self::get_command_path("gcc");
 
-        Ok(Self::new(
-            "GCC".to_string(),
-            version,
-            is_compatible,
-            path,
-        ))
+        Ok(Self::new("GCC".to_string(), version, is_compatible, path))
     }
 
     /// Detect Clang compiler
@@ -98,16 +88,11 @@ impl CompilerInfo {
 
         let version = Self::parse_clang_version(&output_str)?;
         let is_compatible = Self::is_clang_compatible(&version);
-        
+
         // Get clang path
         let path = Self::get_command_path("clang");
 
-        Ok(Self::new(
-            "Clang".to_string(),
-            version,
-            is_compatible,
-            path,
-        ))
+        Ok(Self::new("Clang".to_string(), version, is_compatible, path))
     }
 
     /// Detect MSVC compiler on Windows
@@ -119,18 +104,13 @@ impl CompilerInfo {
             .map_err(|e| SystemError::CompilerDetection(format!("Failed to run cl: {}", e)))?;
 
         let output_str = String::from_utf8_lossy(&output.stderr);
-        
+
         if output_str.contains("Microsoft") {
             let version = Self::parse_msvc_version(&output_str)?;
             let is_compatible = Self::is_msvc_compatible(&version);
             let path = Self::get_command_path("cl");
 
-            Ok(Self::new(
-                "MSVC".to_string(),
-                version,
-                is_compatible,
-                path,
-            ))
+            Ok(Self::new("MSVC".to_string(), version, is_compatible, path))
         } else {
             Err(SystemError::CompilerDetection("MSVC not found".to_string()).into())
         }
@@ -138,22 +118,25 @@ impl CompilerInfo {
 
     /// Parse GCC version from output
     pub fn parse_gcc_version(output: &str) -> CudaMgrResult<String> {
-        let first_line = output.lines().next()
+        let first_line = output
+            .lines()
+            .next()
             .ok_or_else(|| SystemError::CompilerDetection("Empty gcc output".to_string()))?;
 
         // Look for version pattern like "gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0"
         // We want the clean version number at the end, not the one in parentheses
         let words: Vec<&str> = first_line.split_whitespace().collect();
-        
+
         // Find the last word that starts with a digit and looks like a version
         let version = words
             .iter()
             .rev()
             .find(|word| {
-                word.chars().next().map_or(false, |c| c.is_ascii_digit()) &&
-                word.contains('.')
+                word.chars().next().map_or(false, |c| c.is_ascii_digit()) && word.contains('.')
             })
-            .ok_or_else(|| SystemError::CompilerDetection("Could not parse gcc version".to_string()))?
+            .ok_or_else(|| {
+                SystemError::CompilerDetection("Could not parse gcc version".to_string())
+            })?
             .to_string();
 
         Ok(version)
@@ -161,7 +144,9 @@ impl CompilerInfo {
 
     /// Parse Clang version from output
     pub fn parse_clang_version(output: &str) -> CudaMgrResult<String> {
-        let first_line = output.lines().next()
+        let first_line = output
+            .lines()
+            .next()
             .ok_or_else(|| SystemError::CompilerDetection("Empty clang output".to_string()))?;
 
         // Look for version pattern like "clang version 12.0.0"
@@ -170,7 +155,9 @@ impl CompilerInfo {
             let version = version_part
                 .split_whitespace()
                 .next()
-                .ok_or_else(|| SystemError::CompilerDetection("Could not parse clang version".to_string()))?
+                .ok_or_else(|| {
+                    SystemError::CompilerDetection("Could not parse clang version".to_string())
+                })?
                 .to_string();
             Ok(version)
         } else {

@@ -18,10 +18,13 @@ VERSION_CODENAME=focal
 UBUNTU_CODENAME=focal"#;
 
         let distro = DistroInfo::parse_os_release(os_release_content).unwrap();
-        
+
         assert_eq!(distro.name, "Ubuntu");
         assert_eq!(distro.version, "20.04.3 LTS (Focal Fossa)");
-        assert!(matches!(distro.os_type, OsType::Linux(LinuxDistro::Ubuntu(_))));
+        assert!(matches!(
+            distro.os_type,
+            OsType::Linux(LinuxDistro::Ubuntu(_))
+        ));
         assert!(matches!(distro.package_manager, PackageManager::Apt));
     }
 
@@ -48,9 +51,12 @@ VARIANT="Workstation Edition"
 VARIANT_ID=workstation"#;
 
         let distro = DistroInfo::parse_os_release(os_release_content).unwrap();
-        
+
         assert_eq!(distro.name, "Fedora Linux");
-        assert!(matches!(distro.os_type, OsType::Linux(LinuxDistro::Fedora(_))));
+        assert!(matches!(
+            distro.os_type,
+            OsType::Linux(LinuxDistro::Fedora(_))
+        ));
         assert!(matches!(distro.package_manager, PackageManager::Dnf));
     }
 
@@ -62,7 +68,7 @@ DISTRIB_CODENAME=bionic
 DISTRIB_DESCRIPTION="Ubuntu 18.04.6 LTS""#;
 
         let distro = DistroInfo::parse_lsb_release(lsb_content).unwrap();
-        
+
         assert_eq!(distro.name, "Ubuntu 18.04.6 LTS");
         assert_eq!(distro.version, "18.04");
     }
@@ -75,9 +81,12 @@ ID=customlinux
 PRETTY_NAME="Custom Linux 1.0""#;
 
         let distro = DistroInfo::parse_os_release(os_release_content).unwrap();
-        
+
         assert_eq!(distro.name, "Custom Linux");
-        assert!(matches!(distro.os_type, OsType::Linux(LinuxDistro::Generic(_))));
+        assert!(matches!(
+            distro.os_type,
+            OsType::Linux(LinuxDistro::Generic(_))
+        ));
         assert!(matches!(distro.package_manager, PackageManager::Unknown));
     }
 }

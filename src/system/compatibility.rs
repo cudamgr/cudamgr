@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Represents a mapping between GPU architectures and their compute capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,65 +25,83 @@ impl CompatibilityRegistry {
 
     fn default_builtin() -> Self {
         let mut gpu_architectures = HashMap::new();
-        
+
         // Add GPUs and their capabilities
         // RTX 40 series (Ada Lovelace)
         for model in ["rtx 4090", "rtx 4080", "rtx 4070", "rtx 4060"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Ada Lovelace".to_string(),
-                compute_capability: (8, 9),
-                min_driver_version: Some("520.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Ada Lovelace".to_string(),
+                    compute_capability: (8, 9),
+                    min_driver_version: Some("520.00".to_string()),
+                },
+            );
         }
 
         // RTX 30 series (Ampere)
         for model in ["rtx 3090", "rtx 3080", "rtx 3070", "rtx 3060", "rtx 3050"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Ampere".to_string(),
-                compute_capability: (8, 6),
-                min_driver_version: Some("450.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Ampere".to_string(),
+                    compute_capability: (8, 6),
+                    min_driver_version: Some("450.00".to_string()),
+                },
+            );
         }
 
         // RTX 20 series (Turing)
         for model in ["rtx 2080", "rtx 2070", "rtx 2060", "quadro rtx"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Turing".to_string(),
-                compute_capability: (7, 5),
-                min_driver_version: Some("410.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Turing".to_string(),
+                    compute_capability: (7, 5),
+                    min_driver_version: Some("410.00".to_string()),
+                },
+            );
         }
 
         // GTX 16 series (Turing)
         for model in ["gtx 1660", "gtx 1650", "gtx 1630"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Turing".to_string(),
-                compute_capability: (7, 5),
-                min_driver_version: Some("418.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Turing".to_string(),
+                    compute_capability: (7, 5),
+                    min_driver_version: Some("418.00".to_string()),
+                },
+            );
         }
 
         // GTX 10 series (Pascal)
         for model in ["gtx 1080", "gtx 1070", "gtx 1060", "gtx 1050", "titan xp"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Pascal".to_string(),
-                compute_capability: (6, 1),
-                min_driver_version: Some("367.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Pascal".to_string(),
+                    compute_capability: (6, 1),
+                    min_driver_version: Some("367.00".to_string()),
+                },
+            );
         }
 
         // Tesla/Datacenter keys
-        gpu_architectures.insert("tesla v100".to_string(), GpuArchitecture {
-            name: "Tesla V100".to_string(),
-            architecture: "Volta".to_string(),
-            compute_capability: (7, 0),
-            min_driver_version: None,
-        });
+        gpu_architectures.insert(
+            "tesla v100".to_string(),
+            GpuArchitecture {
+                name: "Tesla V100".to_string(),
+                architecture: "Volta".to_string(),
+                compute_capability: (7, 0),
+                min_driver_version: None,
+            },
+        );
 
         // Driver Version -> Max CUDA Version Mapping
         // Ordered from newest to oldest
@@ -112,7 +130,7 @@ impl CompatibilityRegistry {
     /// Lookup compute capability for a GPU model
     pub fn get_compute_capability(&self, model: &str) -> Option<(u32, u32)> {
         let model_lower = model.to_lowercase();
-        
+
         // Exact match
         if let Some(info) = self.gpu_architectures.get(&model_lower) {
             return Some(info.compute_capability);
@@ -124,7 +142,7 @@ impl CompatibilityRegistry {
                 return Some(info.compute_capability);
             }
         }
-        
+
         None
     }
 
@@ -135,9 +153,14 @@ impl CompatibilityRegistry {
                 return Some(cuda_ver.clone());
             }
         }
-        
+
         // Fallback for very new drivers (assume latest known)
-        if let Ok(major) = driver_version.split('.').next().unwrap_or("0").parse::<i32>() {
+        if let Ok(major) = driver_version
+            .split('.')
+            .next()
+            .unwrap_or("0")
+            .parse::<i32>()
+        {
             if major > 570 {
                 return Some("12.8+".to_string());
             }

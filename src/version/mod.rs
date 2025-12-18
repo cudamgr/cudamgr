@@ -1,11 +1,11 @@
 pub mod registry;
-pub mod switcher;
 pub mod resolver;
+pub mod switcher;
 
-use std::path::PathBuf;
+use crate::error::{CudaMgrResult, VersionError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::error::{VersionError, CudaMgrResult};
+use std::path::PathBuf;
 
 /// Version information structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +36,10 @@ impl VersionManager for DefaultVersionManager {
 
     async fn list_available(&self) -> CudaMgrResult<Vec<String>> {
         // TODO: Implement available version listing
-        Err(VersionError::Registry("Available version listing not yet implemented".to_string()).into())
+        Err(
+            VersionError::Registry("Available version listing not yet implemented".to_string())
+                .into(),
+        )
     }
 
     async fn switch_version(&self, _version: &str) -> CudaMgrResult<()> {
@@ -46,6 +49,9 @@ impl VersionManager for DefaultVersionManager {
 
     async fn get_active_version(&self) -> CudaMgrResult<Option<String>> {
         // TODO: Implement active version detection
-        Err(VersionError::Registry("Active version detection not yet implemented".to_string()).into())
+        Err(
+            VersionError::Registry("Active version detection not yet implemented".to_string())
+                .into(),
+        )
     }
 }

@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CudaMgrConfig {
@@ -34,7 +34,7 @@ impl Default for CudaMgrConfig {
     fn default() -> Self {
         let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
         let cudamgr_dir = home_dir.join(".cudamgr");
-        
+
         Self {
             install_dir: cudamgr_dir.join("versions"),
             cache_dir: cudamgr_dir.join("cache"),
@@ -52,13 +52,12 @@ impl Default for CudaMgrConfig {
 impl CudaMgrConfig {
     pub fn load() -> crate::error::CudaMgrResult<Self> {
         let config_path = Self::config_path();
-        
+
         if config_path.exists() {
             let content = std::fs::read_to_string(&config_path)?;
-            let config: Self = serde_json::from_str(&content)
-                .map_err(|e| crate::error::ConfigError::Environment(
-                    format!("Failed to parse config: {}", e)
-                ))?;
+            let config: Self = serde_json::from_str(&content).map_err(|e| {
+                crate::error::ConfigError::Environment(format!("Failed to parse config: {}", e))
+            })?;
             Ok(config)
         } else {
             Ok(Self::default())
@@ -67,16 +66,15 @@ impl CudaMgrConfig {
 
     pub fn save(&self) -> crate::error::CudaMgrResult<()> {
         let config_path = Self::config_path();
-        
+
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
-        let content = serde_json::to_string_pretty(self)
-            .map_err(|e| crate::error::ConfigError::Environment(
-                format!("Failed to serialize config: {}", e)
-            ))?;
-        
+
+        let content = serde_json::to_string_pretty(self).map_err(|e| {
+            crate::error::ConfigError::Environment(format!("Failed to serialize config: {}", e))
+        })?;
+
         std::fs::write(&config_path, content)?;
         Ok(())
     }

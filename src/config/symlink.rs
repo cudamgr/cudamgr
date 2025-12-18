@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use crate::error::{ConfigError, CudaMgrResult};
+use std::path::{Path, PathBuf};
 
 /// Symlink management for version switching
 pub struct SymlinkManager;

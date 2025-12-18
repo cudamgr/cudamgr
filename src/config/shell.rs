@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use crate::error::{ConfigError, CudaMgrResult};
+use std::path::PathBuf;
 
 /// Shell-specific configuration management
 pub struct ShellConfigManager;
@@ -11,9 +11,17 @@ impl ShellConfigManager {
     }
 
     /// Configure shell for CUDA (bash, zsh, etc.)
-    pub async fn configure_shell(&self, shell_type: &str, cuda_home: &PathBuf) -> CudaMgrResult<()> {
+    pub async fn configure_shell(
+        &self,
+        shell_type: &str,
+        cuda_home: &PathBuf,
+    ) -> CudaMgrResult<()> {
         // TODO: Implement shell configuration
-        tracing::info!("Configuring {} shell for CUDA at {:?}", shell_type, cuda_home);
+        tracing::info!(
+            "Configuring {} shell for CUDA at {:?}",
+            shell_type,
+            cuda_home
+        );
         Err(ConfigError::Shell("Shell configuration not yet implemented".to_string()).into())
     }
 

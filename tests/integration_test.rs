@@ -1,5 +1,5 @@
-use cudamgr::system::{GpuInfo, GpuVendor, CudaInstallation};
 use cudamgr::config::CudaMgrConfig;
+use cudamgr::system::{CudaInstallation, GpuInfo, GpuVendor};
 use std::path::PathBuf;
 
 #[test]
@@ -11,22 +11,19 @@ fn test_data_model_integration() {
     //     "11.8".to_string(),
     //     PathBuf::from("/usr/local/cuda-11.8")
     // );
-    
+
     // Test CUDA installation
     let install_path = if cfg!(windows) {
         PathBuf::from("C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.8")
     } else {
         PathBuf::from("/usr/local/cuda-11.8")
     };
-    let installation = CudaInstallation::new(
-        "11.8".to_string(),
-        install_path.clone()
-    );
+    let installation = CudaInstallation::new("11.8".to_string(), install_path.clone());
     assert_eq!(installation.version, "11.8");
     // assert_eq!(installation.get_nvcc_path(), PathBuf::from("/usr/local/cuda-11.8/bin/nvcc"));
     let binary_name = if cfg!(windows) { "nvcc.exe" } else { "nvcc" };
     let expected_path = install_path.join("bin").join(binary_name);
-    
+
     assert_eq!(installation.get_nvcc_path(), expected_path);
     // Test config
     let config = CudaMgrConfig::default();
@@ -47,7 +44,7 @@ fn test_serialization_roundtrip() {
 
     let json = serde_json::to_string(&gpu).unwrap();
     let deserialized: GpuInfo = serde_json::from_str(&json).unwrap();
-    
+
     assert_eq!(gpu, deserialized);
     assert!(gpu.is_cuda_compatible());
 }

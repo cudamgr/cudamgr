@@ -23,7 +23,7 @@ mod tests {
 
         let json = serde_json::to_string_pretty(&config).unwrap();
         let deserialized: CudaMgrConfig = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(config, deserialized);
         assert_eq!(config.max_concurrent_downloads, 5);
         assert!(config.proxy_settings.is_some());
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_config_default() {
         let config = CudaMgrConfig::default();
-        
+
         assert!(config.install_dir.to_string_lossy().contains(".cudamgr"));
         assert!(config.cache_dir.to_string_lossy().contains("cache"));
         assert_eq!(config.max_concurrent_downloads, 3);
@@ -69,7 +69,7 @@ mod tests {
 
         let json = serde_json::to_string(&proxy).unwrap();
         let deserialized: ProxyConfig = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(proxy, deserialized);
         assert_eq!(proxy.no_proxy.len(), 2);
     }

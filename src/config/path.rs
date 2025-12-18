@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use crate::error::{ConfigError, CudaMgrResult};
+use std::path::PathBuf;
 
 /// PATH manipulation utilities
 pub struct PathManager;

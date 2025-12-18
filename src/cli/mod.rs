@@ -1,12 +1,12 @@
 pub mod commands;
-pub mod output;
 pub mod interactive;
+pub mod output;
 
 #[cfg(test)]
 mod tests;
 
-use clap::Parser;
 use crate::error::CudaMgrResult;
+use clap::Parser;
 
 #[derive(Parser)]
 #[command(name = "cudamgr")]

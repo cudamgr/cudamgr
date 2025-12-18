@@ -1,5 +1,5 @@
+use crate::error::{CudaMgrResult, InstallError};
 use std::path::Path;
-use crate::error::{InstallError, CudaMgrResult};
 
 /// Cleanup utilities for failed installations
 pub struct InstallationCleanup;

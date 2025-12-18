@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 // use std::collections::HashMap; // Unused import removed
+use crate::error::{CudaMgrResult, SystemError};
 use std::process::Command;
-use crate::error::{SystemError, CudaMgrResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GpuInfo {
@@ -36,16 +36,16 @@ impl GpuInfo {
     /// Detect GPU information using the default detector
     pub fn detect() -> CudaMgrResult<Option<Self>> {
         let detector = DefaultGpuDetector::new();
-        
+
         // Use synchronous detection to avoid runtime conflicts
         let gpus = detector.detect_gpus_sync()?;
-        
+
         // Return the first CUDA-compatible GPU, or the first GPU if none are CUDA-compatible
         let cuda_gpu = gpus.iter().find(|gpu| gpu.is_cuda_compatible()).cloned();
         if cuda_gpu.is_some() {
             return Ok(cuda_gpu);
         }
-        
+
         Ok(gpus.into_iter().next())
     }
 
@@ -113,12 +113,16 @@ impl DefaultGpuDetector {
                         // Parse lspci output format: "00:02.0 VGA compatible controller: Intel Corporation ..."
                         let parts: Vec<&str> = line.split(':').collect();
                         if parts.len() >= 3 {
-                            let pci_id = Some(format!("{}:{}", parts[0], parts[1].split_whitespace().next().unwrap_or("")));
-                            
+                            let pci_id = Some(format!(
+                                "{}:{}",
+                                parts[0],
+                                parts[1].split_whitespace().next().unwrap_or("")
+                            ));
+
                             // Extract vendor and device name
                             let description = parts[2..].join(":");
                             let (vendor, name) = Self::parse_gpu_description(&description);
-                            
+
                             let compute_capability = if matches!(vendor, GpuVendor::Nvidia) {
                                 self.get_compute_capability(&name)
                             } else {
@@ -149,7 +153,10 @@ impl DefaultGpuDetector {
     /// Detect NVIDIA GPUs using nvidia-smi (synchronous version)
     pub fn detect_nvidia_smi_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = std::process::Command::new("nvidia-smi")
-            .args(&["--query-gpu=name,memory.total,driver_version,pci.bus_id", "--format=csv,noheader,nounits"])
+            .args(&[
+                "--query-gpu=name,memory.total,driver_version,pci.bus_id",
+                "--format=csv,noheader,nounits",
+            ])
             .output()
             .map_err(|e| SystemError::GpuDetection(format!("Failed to run nvidia-smi: {}", e)))?;
 
@@ -192,7 +199,10 @@ impl DefaultGpuDetector {
     /// Detect NVIDIA GPUs using nvidia-smi
     async fn detect_nvidia_smi(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = Command::new("nvidia-smi")
-            .args(&["--query-gpu=name,memory.total,driver_version,pci.bus_id", "--format=csv,noheader,nounits"])
+            .args(&[
+                "--query-gpu=name,memory.total,driver_version,pci.bus_id",
+                "--format=csv,noheader,nounits",
+            ])
             .output();
 
         match output {
@@ -237,19 +247,18 @@ impl DefaultGpuDetector {
                 if e.kind() == std::io::ErrorKind::NotFound {
                     Ok(Vec::new()) // No NVIDIA GPUs or driver not installed
                 } else {
-                    Err(SystemError::GpuDetection(format!("Failed to run nvidia-smi: {}", e)).into())
+                    Err(
+                        SystemError::GpuDetection(format!("Failed to run nvidia-smi: {}", e))
+                            .into(),
+                    )
                 }
             }
         }
     }
 
-
-
     /// Detect GPUs using lspci on Linux
     async fn detect_lspci(&self) -> CudaMgrResult<Vec<GpuInfo>> {
-        let output = Command::new("lspci")
-            .args(&["-nn"])
-            .output();
+        let output = Command::new("lspci").args(&["-nn"]).output();
 
         match output {
             Ok(output) if output.status.success() => {
@@ -270,16 +279,14 @@ impl DefaultGpuDetector {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 Err(SystemError::GpuDetection(format!("lspci failed: {}", stderr)).into())
             }
-            Err(e) => {
-                Err(SystemError::GpuDetection(format!("Failed to run lspci: {}", e)).into())
-            }
+            Err(e) => Err(SystemError::GpuDetection(format!("Failed to run lspci: {}", e)).into()),
         }
     }
 
     /// Parse a single lspci line to extract GPU information
     fn parse_lspci_line(&self, line: &str) -> Option<GpuInfo> {
         // Example line: "01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GeForce RTX 3080 [10de:2206] (rev a1)"
-        
+
         // Split on the first space to separate PCI ID from the rest
         let parts: Vec<&str> = line.splitn(2, ' ').collect();
         if parts.len() < 2 {
@@ -296,7 +303,9 @@ impl DefaultGpuDetector {
         // Extract vendor and name
         let vendor = if description.to_lowercase().contains("nvidia") {
             GpuVendor::Nvidia
-        } else if description.to_lowercase().contains("amd") || description.to_lowercase().contains("ati") {
+        } else if description.to_lowercase().contains("amd")
+            || description.to_lowercase().contains("ati")
+        {
             GpuVendor::Amd
         } else if description.to_lowercase().contains("intel") {
             GpuVendor::Intel
@@ -341,7 +350,7 @@ impl DefaultGpuDetector {
     /// Parse GPU description from lspci output
     fn parse_gpu_description(description: &str) -> (GpuVendor, &str) {
         let desc_lower = description.to_lowercase();
-        
+
         let vendor = if desc_lower.contains("nvidia") {
             GpuVendor::Nvidia
         } else if desc_lower.contains("amd") || desc_lower.contains("radeon") {
@@ -351,16 +360,15 @@ impl DefaultGpuDetector {
         } else {
             GpuVendor::Unknown("Unknown".to_string())
         };
-        
+
         // Extract the GPU name (everything after the first colon and space)
-        let name = description.trim_start_matches(|c: char| c != ':')
+        let name = description
+            .trim_start_matches(|c: char| c != ':')
             .trim_start_matches(':')
             .trim();
-        
+
         (vendor, name)
     }
-
-
 
     /// Get compute capability for NVIDIA GPU based on name
     fn get_compute_capability(&self, gpu_name: &str) -> Option<(u32, u32)> {
@@ -368,13 +376,17 @@ impl DefaultGpuDetector {
         REGISTRY.get_compute_capability(gpu_name)
     }
 
-
-
     /// Detect GPUs on Windows using wmic (synchronous version)
     #[cfg(target_os = "windows")]
     pub fn detect_windows_wmic_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = std::process::Command::new("wmic")
-            .args(&["path", "win32_VideoController", "get", "name,adapterram,driverversion", "/format:csv"])
+            .args(&[
+                "path",
+                "win32_VideoController",
+                "get",
+                "name,adapterram,driverversion",
+                "/format:csv",
+            ])
             .output()
             .map_err(|e| SystemError::GpuDetection(format!("Failed to run wmic: {}", e)))?;
 
@@ -385,7 +397,8 @@ impl DefaultGpuDetector {
         let output_str = String::from_utf8_lossy(&output.stdout);
         let mut gpus = Vec::new();
 
-        for line in output_str.lines().skip(1) { // Skip header
+        for line in output_str.lines().skip(1) {
+            // Skip header
             if line.trim().is_empty() {
                 continue;
             }
@@ -394,7 +407,11 @@ impl DefaultGpuDetector {
             // Expected format: Node, AdapterRAM, DriverVersion, Name
             if parts.len() >= 4 {
                 let memory_bytes = parts[1].trim().parse::<u64>().unwrap_or(0);
-                let driver_version = if parts[2].trim().is_empty() { None } else { Some(parts[2].trim().to_string()) };
+                let driver_version = if parts[2].trim().is_empty() {
+                    None
+                } else {
+                    Some(parts[2].trim().to_string())
+                };
                 let name = parts[3].trim().to_string();
 
                 if name.is_empty() {
@@ -403,7 +420,9 @@ impl DefaultGpuDetector {
 
                 let vendor = if name.to_lowercase().contains("nvidia") {
                     GpuVendor::Nvidia
-                } else if name.to_lowercase().contains("amd") || name.to_lowercase().contains("radeon") {
+                } else if name.to_lowercase().contains("amd")
+                    || name.to_lowercase().contains("radeon")
+                {
                     GpuVendor::Amd
                 } else if name.to_lowercase().contains("intel") {
                     GpuVendor::Intel
@@ -436,7 +455,13 @@ impl DefaultGpuDetector {
     #[cfg(target_os = "windows")]
     async fn detect_windows_wmic(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = Command::new("wmic")
-            .args(&["path", "win32_VideoController", "get", "name,adapterram,driverversion", "/format:csv"])
+            .args(&[
+                "path",
+                "win32_VideoController",
+                "get",
+                "name,adapterram,driverversion",
+                "/format:csv",
+            ])
             .output();
 
         match output {
@@ -444,7 +469,8 @@ impl DefaultGpuDetector {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let mut gpus = Vec::new();
 
-                for line in stdout.lines().skip(1) { // Skip header
+                for line in stdout.lines().skip(1) {
+                    // Skip header
                     if line.trim().is_empty() {
                         continue;
                     }
@@ -459,7 +485,9 @@ impl DefaultGpuDetector {
 
                         let vendor = if name.to_lowercase().contains("nvidia") {
                             GpuVendor::Nvidia
-                        } else if name.to_lowercase().contains("amd") || name.to_lowercase().contains("radeon") {
+                        } else if name.to_lowercase().contains("amd")
+                            || name.to_lowercase().contains("radeon")
+                        {
                             GpuVendor::Amd
                         } else if name.to_lowercase().contains("intel") {
                             GpuVendor::Intel
@@ -491,9 +519,7 @@ impl DefaultGpuDetector {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 Err(SystemError::GpuDetection(format!("wmic failed: {}", stderr)).into())
             }
-            Err(e) => {
-                Err(SystemError::GpuDetection(format!("Failed to run wmic: {}", e)).into())
-            }
+            Err(e) => Err(SystemError::GpuDetection(format!("Failed to run wmic: {}", e)).into()),
         }
     }
 }
@@ -534,19 +560,18 @@ impl GpuDetector for DefaultGpuDetector {
             .into_iter()
             .filter(|gpu| matches!(gpu.vendor, GpuVendor::Nvidia))
             .collect();
-        
+
         Ok(nvidia_gpus)
     }
-}#
-[cfg(test)]
+}
+#[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_gpu_info_creation() {
         let gpu = GpuInfo::new("GeForce RTX 3080".to_string(), GpuVendor::Nvidia);
-        
+
         assert_eq!(gpu.name, "GeForce RTX 3080");
         assert_eq!(gpu.vendor, GpuVendor::Nvidia);
         assert_eq!(gpu.memory_mb, None);
@@ -559,11 +584,11 @@ mod tests {
     fn test_gpu_cuda_compatibility() {
         let mut nvidia_gpu = GpuInfo::new("GeForce RTX 3080".to_string(), GpuVendor::Nvidia);
         nvidia_gpu.compute_capability = Some((8, 6));
-        
+
         let amd_gpu = GpuInfo::new("Radeon RX 6800".to_string(), GpuVendor::Amd);
-        
+
         let nvidia_no_compute = GpuInfo::new("GeForce GTX 750".to_string(), GpuVendor::Nvidia);
-        
+
         assert!(nvidia_gpu.is_cuda_compatible());
         assert!(!amd_gpu.is_cuda_compatible());
         assert!(!nvidia_no_compute.is_cuda_compatible());
@@ -582,17 +607,20 @@ mod tests {
 
         // Test exact match
         assert!(gpu.supports_compute_capability((8, 6)));
-        
+
         // Test lower requirements
         assert!(gpu.supports_compute_capability((7, 5)));
         assert!(gpu.supports_compute_capability((8, 0)));
-        
+
         // Test higher requirements
         assert!(!gpu.supports_compute_capability((8, 7)));
         assert!(!gpu.supports_compute_capability((9, 0)));
-        
+
         // Test GPU without compute capability
-        let gpu_no_compute = GpuInfo::new("Unknown GPU".to_string(), GpuVendor::Unknown("Test".to_string()));
+        let gpu_no_compute = GpuInfo::new(
+            "Unknown GPU".to_string(),
+            GpuVendor::Unknown("Test".to_string()),
+        );
         assert!(!gpu_no_compute.supports_compute_capability((3, 0)));
     }
 
@@ -612,11 +640,11 @@ mod tests {
     #[test]
     fn test_parse_lspci_line() {
         let detector = DefaultGpuDetector::new();
-        
+
         // Test simple parsing logic
         let nvidia_line = "01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GeForce RTX 3080 [10de:2206] (rev a1)";
         let result = detector.parse_lspci_line(nvidia_line);
-        
+
         // Just test that it doesn't panic and returns something reasonable
         match result {
             Some(gpu) => {
@@ -627,7 +655,7 @@ mod tests {
                 // This is also acceptable for the test
             }
         }
-        
+
         // Test invalid line
         let invalid_line = "invalid line format";
         assert!(detector.parse_lspci_line(invalid_line).is_none());
@@ -636,24 +664,42 @@ mod tests {
     #[test]
     fn test_compute_capability_mapping() {
         let detector = DefaultGpuDetector::new();
-        
+
         // Test RTX 40 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 4090"), Some((8, 9)));
-        assert_eq!(detector.get_compute_capability("GeForce RTX 4080"), Some((8, 9)));
-        
+        assert_eq!(
+            detector.get_compute_capability("GeForce RTX 4090"),
+            Some((8, 9))
+        );
+        assert_eq!(
+            detector.get_compute_capability("GeForce RTX 4080"),
+            Some((8, 9))
+        );
+
         // Test RTX 30 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 3080"), Some((8, 6)));
-        assert_eq!(detector.get_compute_capability("GeForce RTX 3070"), Some((8, 6)));
-        
+        assert_eq!(
+            detector.get_compute_capability("GeForce RTX 3080"),
+            Some((8, 6))
+        );
+        assert_eq!(
+            detector.get_compute_capability("GeForce RTX 3070"),
+            Some((8, 6))
+        );
+
         // Test RTX 20 series
-        assert_eq!(detector.get_compute_capability("GeForce RTX 2080 Ti"), Some((7, 5)));
-        
+        assert_eq!(
+            detector.get_compute_capability("GeForce RTX 2080 Ti"),
+            Some((7, 5))
+        );
+
         // Test GTX 10 series
-        assert_eq!(detector.get_compute_capability("GeForce GTX 1080"), Some((6, 1)));
-        
+        assert_eq!(
+            detector.get_compute_capability("GeForce GTX 1080"),
+            Some((6, 1))
+        );
+
         // Test Tesla cards
         assert_eq!(detector.get_compute_capability("Tesla V100"), Some((7, 0)));
-        
+
         // Test unknown GPU
         assert_eq!(detector.get_compute_capability("Unknown GPU Model"), None);
     }
@@ -661,13 +707,13 @@ mod tests {
     #[test]
     fn test_compatibility_registry_completeness() {
         use crate::system::compatibility::REGISTRY;
-        
+
         // Verify keys exist via direct lookup (since we can't iterate the private hashmap easily unless we expose it, but get_compute_capability covers it)
         assert!(REGISTRY.get_compute_capability("rtx 4090").is_some());
         assert!(REGISTRY.get_compute_capability("rtx 3080").is_some());
         assert!(REGISTRY.get_compute_capability("gtx 1080").is_some());
         assert!(REGISTRY.get_compute_capability("tesla v100").is_some());
-        
+
         // Verify compute capabilities are correct
         assert_eq!(REGISTRY.get_compute_capability("rtx 4090"), Some((8, 9)));
         assert_eq!(REGISTRY.get_compute_capability("rtx 3080"), Some((8, 6)));
@@ -677,11 +723,11 @@ mod tests {
     #[tokio::test]
     async fn test_detect_nvidia_gpus_empty() {
         let detector = DefaultGpuDetector::new();
-        
+
         // This test will likely return empty or error in CI/testing environments without NVIDIA GPUs
         // We just test that it doesn't panic
         let result = detector.detect_nvidia_gpus().await;
-        
+
         // Should not panic, result can be Ok(empty) or Err
         match result {
             Ok(nvidia_gpus) => {
@@ -699,11 +745,11 @@ mod tests {
     #[tokio::test]
     async fn test_detect_gpus_no_crash() {
         let detector = DefaultGpuDetector::new();
-        
+
         // This test ensures the detection doesn't crash even in environments
         // without GPUs or with missing tools
         let result = detector.detect_gpus().await;
-        
+
         // Should not panic, but may return empty list or error
         match result {
             Ok(gpus) => {
@@ -712,7 +758,10 @@ mod tests {
                     assert!(!gpu.name.is_empty());
                     // Vendor should be one of the known types
                     match gpu.vendor {
-                        GpuVendor::Nvidia | GpuVendor::Amd | GpuVendor::Intel | GpuVendor::Unknown(_) => {}
+                        GpuVendor::Nvidia
+                        | GpuVendor::Amd
+                        | GpuVendor::Intel
+                        | GpuVendor::Unknown(_) => {}
                     }
                 }
             }
@@ -813,15 +862,15 @@ mod tests {
         fn test_mock_nvidia_smi_parsing() {
             let mock = MockGpuDetector::new();
             let nvidia_output = "GeForce RTX 3080, 10240, 470.57.02, 00000000:01:00.0\nGeForce GTX 1080, 8192, 470.57.02, 00000000:02:00.0";
-            
+
             let gpus = mock.parse_nvidia_smi_output(nvidia_output);
-            
+
             assert_eq!(gpus.len(), 2);
-            
+
             assert_eq!(gpus[0].name, "GeForce RTX 3080");
             assert_eq!(gpus[0].memory_mb, Some(10240));
             assert_eq!(gpus[0].driver_version, Some("470.57.02".to_string()));
-            
+
             assert_eq!(gpus[1].name, "GeForce GTX 1080");
             assert_eq!(gpus[1].memory_mb, Some(8192));
         }
@@ -830,7 +879,7 @@ mod tests {
         fn test_mock_empty_nvidia_smi() {
             let mock = MockGpuDetector::new();
             let empty_output = "";
-            
+
             let gpus = mock.parse_nvidia_smi_output(empty_output);
             assert_eq!(gpus.len(), 0);
         }
@@ -839,7 +888,7 @@ mod tests {
         fn test_mock_malformed_nvidia_smi() {
             let mock = MockGpuDetector::new();
             let malformed_output = "Invalid line\nAnother invalid line";
-            
+
             let gpus = mock.parse_nvidia_smi_output(malformed_output);
             assert_eq!(gpus.len(), 0);
         }

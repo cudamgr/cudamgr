@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
 mod cli;
-mod system;
-mod install;
-mod version;
 mod config;
 mod error;
+mod install;
+mod system;
+mod version;
 
 use clap::Parser;
 use tracing_subscriber;

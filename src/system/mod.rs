@@ -1,26 +1,26 @@
-pub mod gpu;
-pub mod driver;
-pub mod compiler;
-pub mod distro;
-pub mod storage;
-pub mod security;
-pub mod cuda;
-pub mod report;
 pub mod compatibility;
-pub mod wsl;
+pub mod compiler;
+pub mod cuda;
+pub mod distro;
+pub mod driver;
+pub mod gpu;
+pub mod report;
+pub mod security;
+pub mod storage;
 pub mod visual_studio;
+pub mod wsl;
 
+pub use compatibility::*;
+pub use compiler::*;
 pub use cuda::*;
 pub use distro::*;
-pub use gpu::*;
 pub use driver::*;
-pub use compiler::*;
-pub use storage::*;
-pub use security::*;
+pub use gpu::*;
 pub use report::*;
-pub use compatibility::*;
-pub use wsl::*;
+pub use security::*;
+pub use storage::*;
 pub use visual_studio::*;
+pub use wsl::*;
 
 #[cfg(test)]
 mod tests;
@@ -28,8 +28,8 @@ mod tests;
 #[cfg(test)]
 mod platform_tests;
 
-use serde::{Deserialize, Serialize};
 use crate::error::CudaMgrResult;
+use serde::{Deserialize, Serialize};
 
 /// Complete system information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,21 +57,22 @@ impl SystemChecker for DefaultSystemChecker {
     async fn check_system(&self) -> CudaMgrResult<SystemInfo> {
         // Detect GPU information
         let gpu = gpu::GpuInfo::detect().unwrap_or(None);
-        
+
         // Detect driver information
         let driver = driver::DriverInfo::detect().ok().flatten();
-        
+
         // Detect compiler information
-        let compiler = compiler::CompilerInfo::detect().ok()
+        let compiler = compiler::CompilerInfo::detect()
+            .ok()
             .and_then(|compilers| compilers.into_iter().find(|c| c.is_compatible));
-        
+
         // Detect distribution information
         let distro = distro::DistroInfo::detect()?;
-        
+
         // Detect storage information
         let storage_path = storage::StorageInfo::get_default_cuda_path();
         let storage = storage::StorageInfo::detect(&storage_path)?;
-        
+
         // Detect security information
         // Detect security information
         let security = security::SecurityInfo::detect()?;
@@ -81,7 +82,7 @@ impl SystemChecker for DefaultSystemChecker {
 
         // Detect Visual Studio (Windows only)
         let visual_studio = visual_studio::VisualStudioInfo::detect().unwrap_or(None);
-        
+
         Ok(SystemInfo {
             gpu,
             driver,
@@ -96,7 +97,7 @@ impl SystemChecker for DefaultSystemChecker {
 
     async fn validate_compatibility(&self, cuda_version: &str) -> CudaMgrResult<bool> {
         let system_info = self.check_system().await?;
-        
+
         // Check GPU compatibility
         if let Some(gpu) = &system_info.gpu {
             if !gpu.supports_cuda() {
@@ -106,7 +107,7 @@ impl SystemChecker for DefaultSystemChecker {
             // No GPU detected
             return Ok(false);
         }
-        
+
         // Check driver compatibility
         if let Some(driver) = &system_info.driver {
             if !driver.supports_cuda_version(cuda_version) {
@@ -116,18 +117,18 @@ impl SystemChecker for DefaultSystemChecker {
             // No driver detected
             return Ok(false);
         }
-        
+
         // Check compiler compatibility
         if system_info.compiler.is_none() {
             // No compatible compiler found
             return Ok(false);
         }
-        
+
         // Check storage space
         if !system_info.storage.has_sufficient_space {
             return Ok(false);
         }
-        
+
         Ok(true)
     }
 }
