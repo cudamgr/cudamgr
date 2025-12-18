@@ -1,0 +1,27 @@
+# cargo-deny configuration
+
+[advisories]
+# Ignore the unmaintained rustls-pemfile advisory as we are delaying the reqwest upgrade
+ignore = [
+    "RUSTSEC-2025-0134",
+]
+
+[licenses]
+# Allow standard open source licenses
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Unicode-3.0",
+    "BSD-3-Clause",
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+# Warn on duplicate dependencies instead of failing
+multiple-versions = "warn"
+wildcards = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -25,6 +25,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       # Required for the 'reqwest' dependency on Linux
       - name: Install Linux Dependencies
@@ -36,7 +38,20 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      # Step 1: Build
+      # Step 1: Quality Checks
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: Run Cargo Deny
+        run: cargo deny check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      # Step 2: Build
       - name: Build
         run: cargo build --verbose
 
