@@ -2,6 +2,7 @@ use crate::error::CudaMgrResult;
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
 use crate::error::SystemError;
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "linux")]
 use std::fs;
 use std::path::Path;
 
@@ -335,9 +336,7 @@ impl SecureBootInfo {
 impl PathConfigInfo {
     /// Check if PATH configuration is optimal for CUDA
     pub fn is_optimal(&self) -> bool {
-        self.cuda_home_set
-            && self.conflicting_cuda_paths.is_empty()
-            && (self.cuda_in_path || !self.cuda_home_set)
+        self.cuda_home_set && self.conflicting_cuda_paths.is_empty() && self.cuda_in_path
     }
 
     /// Get recommendations for PATH configuration

@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 pub mod env;
 pub mod path;
 pub mod shell;

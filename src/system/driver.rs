@@ -175,11 +175,7 @@ impl DriverInfo {
                             let minor = &last_five[3..];
 
                             // Remove leading zero if present (e.g. 053 -> 53)
-                            let major_trimmed = if major.starts_with('0') {
-                                &major[1..]
-                            } else {
-                                major
-                            };
+                            let major_trimmed = major.strip_prefix('0').unwrap_or(major);
 
                             let version = format!("{}.{}", major_trimmed, minor);
                             let max_cuda_version = Self::get_max_cuda_version(&version);

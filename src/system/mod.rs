@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 pub mod compatibility;
 pub mod compiler;
 pub mod cuda;

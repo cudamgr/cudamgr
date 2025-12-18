@@ -9,6 +9,7 @@ pub enum OsType {
 
 /// Linux distribution variants
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum LinuxDistro {
     Ubuntu(String),
     Debian(String),
@@ -244,6 +245,7 @@ impl DistroInfo {
     }
 
     #[cfg(target_os = "windows")]
+    #[allow(dead_code)]
     fn detect_kernel_version() -> Option<String> {
         use std::process::Command;
 

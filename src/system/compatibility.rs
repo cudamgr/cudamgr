@@ -17,6 +17,12 @@ pub struct CompatibilityRegistry {
     pub driver_cuda_map: Vec<(String, String)>, // (Driver Version Prefix, Max CUDA Version)
 }
 
+impl Default for CompatibilityRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CompatibilityRegistry {
     pub fn new() -> Self {
         // In a future version, this could load from a JSON file

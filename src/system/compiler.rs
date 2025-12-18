@@ -132,7 +132,7 @@ impl CompilerInfo {
             .iter()
             .rev()
             .find(|word| {
-                word.chars().next().map_or(false, |c| c.is_ascii_digit()) && word.contains('.')
+                word.chars().next().is_some_and(|c| c.is_ascii_digit()) && word.contains('.')
             })
             .ok_or_else(|| {
                 SystemError::CompilerDetection("Could not parse gcc version".to_string())
@@ -191,7 +191,7 @@ impl CompilerInfo {
             // CUDA 12.x supports GCC up to version 12.x
             // CUDA 11.x supports GCC up to version 11.x
             // We'll be conservative and support GCC 5.x through 12.x
-            major >= 5 && major <= 12
+            (5..=12).contains(&major)
         } else {
             false
         }
@@ -201,7 +201,7 @@ impl CompilerInfo {
     pub fn is_clang_compatible(version: &str) -> bool {
         if let Ok(major) = version.split('.').next().unwrap_or("0").parse::<u32>() {
             // CUDA typically supports Clang 6.0 to 15.x
-            major >= 6 && major <= 16
+            (6..=16).contains(&major)
         } else {
             false
         }

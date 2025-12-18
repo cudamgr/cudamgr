@@ -3,6 +3,7 @@ use std::path::Path;
 
 /// Package downloader with progress tracking
 pub struct PackageDownloader {
+    #[allow(dead_code)]
     client: reqwest::Client,
 }
 

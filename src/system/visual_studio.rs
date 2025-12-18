@@ -49,7 +49,7 @@ impl VisualStudioInfo {
 
         if vswhere_path.exists() {
             let output = Command::new(vswhere_path)
-                .args(&[
+                .args([
                     "-latest",
                     "-products",
                     "*",

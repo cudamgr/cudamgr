@@ -8,7 +8,6 @@ mod system;
 mod version;
 
 use clap::Parser;
-use tracing_subscriber;
 
 use cli::Cli;
 use error::CudaMgrResult;

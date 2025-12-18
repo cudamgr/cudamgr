@@ -132,7 +132,7 @@ impl StorageInfo {
         );
 
         let output = Command::new("powershell")
-            .args(&["-NoProfile", "-Command", &ps_command])
+            .args(["-NoProfile", "-Command", &ps_command])
             .output()
             .map_err(|e| SystemError::StorageCheck(format!("Failed to run powershell: {}", e)))?;
 
@@ -145,15 +145,17 @@ impl StorageInfo {
         // Output should be JSON: { "SizeRemaining": 12345, "Size": 67890 }
         #[derive(Deserialize)]
         struct VolumeInfo {
-            SizeRemaining: u64,
-            Size: u64,
+            #[serde(rename = "SizeRemaining")]
+            size_remaining: u64,
+            #[serde(rename = "Size")]
+            size: u64,
         }
 
         let info: VolumeInfo = serde_json::from_str(&stdout).map_err(|e| {
             SystemError::StorageCheck(format!("Failed to parse powershell output: {}", e))
         })?;
 
-        Ok((info.SizeRemaining, info.Size))
+        Ok((info.size_remaining, info.size))
     }
 
     /// Check if there's enough space for installation

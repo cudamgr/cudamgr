@@ -154,15 +154,13 @@ impl SystemReportGenerator {
                 if !gpu.supports_cuda() {
                     errors.push("No CUDA-compatible GPU detected".to_string());
                     has_errors = true;
+                } else if let Some((major, minor)) = gpu.compute_capability {
+                    recommendations.push(format!(
+                        "GPU {} detected with compute capability {}.{}",
+                        gpu.name, major, minor
+                    ));
                 } else {
-                    if let Some((major, minor)) = gpu.compute_capability {
-                        recommendations.push(format!(
-                            "GPU {} detected with compute capability {}.{}",
-                            gpu.name, major, minor
-                        ));
-                    } else {
-                        recommendations.push(format!("GPU {} detected", gpu.name));
-                    }
+                    recommendations.push(format!("GPU {} detected", gpu.name));
                 }
             }
             None => {

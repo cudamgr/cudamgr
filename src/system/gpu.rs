@@ -74,6 +74,12 @@ pub trait GpuDetector {
 /// Default GPU detector implementation
 pub struct DefaultGpuDetector;
 
+impl Default for DefaultGpuDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultGpuDetector {
     pub fn new() -> Self {
         Self
@@ -153,7 +159,7 @@ impl DefaultGpuDetector {
     /// Detect NVIDIA GPUs using nvidia-smi (synchronous version)
     pub fn detect_nvidia_smi_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = std::process::Command::new("nvidia-smi")
-            .args(&[
+            .args([
                 "--query-gpu=name,memory.total,driver_version,pci.bus_id",
                 "--format=csv,noheader,nounits",
             ])
@@ -199,7 +205,7 @@ impl DefaultGpuDetector {
     /// Detect NVIDIA GPUs using nvidia-smi
     async fn detect_nvidia_smi(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = Command::new("nvidia-smi")
-            .args(&[
+            .args([
                 "--query-gpu=name,memory.total,driver_version,pci.bus_id",
                 "--format=csv,noheader,nounits",
             ])
@@ -257,8 +263,9 @@ impl DefaultGpuDetector {
     }
 
     /// Detect GPUs using lspci on Linux
+    #[cfg(not(target_os = "windows"))]
     async fn detect_lspci(&self) -> CudaMgrResult<Vec<GpuInfo>> {
-        let output = Command::new("lspci").args(&["-nn"]).output();
+        let output = Command::new("lspci").args(["-nn"]).output();
 
         match output {
             Ok(output) if output.status.success() => {
@@ -284,6 +291,7 @@ impl DefaultGpuDetector {
     }
 
     /// Parse a single lspci line to extract GPU information
+    #[cfg(not(target_os = "windows"))]
     fn parse_lspci_line(&self, line: &str) -> Option<GpuInfo> {
         // Example line: "01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GeForce RTX 3080 [10de:2206] (rev a1)"
 
@@ -348,6 +356,7 @@ impl DefaultGpuDetector {
     }
 
     /// Parse GPU description from lspci output
+    #[cfg(not(target_os = "windows"))]
     fn parse_gpu_description(description: &str) -> (GpuVendor, &str) {
         let desc_lower = description.to_lowercase();
 
@@ -380,7 +389,7 @@ impl DefaultGpuDetector {
     #[cfg(target_os = "windows")]
     pub fn detect_windows_wmic_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = std::process::Command::new("wmic")
-            .args(&[
+            .args([
                 "path",
                 "win32_VideoController",
                 "get",
@@ -455,7 +464,7 @@ impl DefaultGpuDetector {
     #[cfg(target_os = "windows")]
     async fn detect_windows_wmic(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = Command::new("wmic")
-            .args(&[
+            .args([
                 "path",
                 "win32_VideoController",
                 "get",
@@ -638,6 +647,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_parse_lspci_line() {
         let detector = DefaultGpuDetector::new();
 
@@ -813,7 +823,9 @@ mod tests {
         use super::*;
 
         struct MockGpuDetector {
+            #[allow(dead_code)]
             nvidia_smi_output: Option<String>,
+            #[allow(dead_code)]
             lspci_output: Option<String>,
         }
 
@@ -825,11 +837,13 @@ mod tests {
                 }
             }
 
+            #[allow(dead_code)]
             fn with_nvidia_smi_output(mut self, output: String) -> Self {
                 self.nvidia_smi_output = Some(output);
                 self
             }
 
+            #[allow(dead_code)]
             fn with_lspci_output(mut self, output: String) -> Self {
                 self.lspci_output = Some(output);
                 self

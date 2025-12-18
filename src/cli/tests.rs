@@ -163,8 +163,8 @@ mod tests {
         match result {
             Ok(detection) => {
                 // Should return a valid detection result
-                assert!(detection.installations.len() >= 0); // Can be empty
-                assert!(detection.conflicts.len() >= 0); // Can be empty
+                // assert!(detection.installations.len() >= 0); // Can be empty
+                // assert!(detection.conflicts.len() >= 0); // Can be empty
 
                 // If installations are found, they should be valid or invalid (not panic)
                 for installation in &detection.installations {
@@ -185,15 +185,15 @@ mod tests {
         match result {
             Ok(security_info) => {
                 // Should have valid security information
-                assert!(security_info.path_configuration.path_entries.len() >= 0);
+                // assert!(security_info.path_configuration.path_entries.len() >= 0);
 
                 // Security issues should be a valid list
-                let issues = security_info.get_security_issues();
-                assert!(issues.len() >= 0);
+                let _issues = security_info.get_security_issues();
+                // assert!(issues.len() >= 0);
 
                 // PATH configuration should have valid recommendations
-                let recommendations = security_info.path_configuration.get_recommendations();
-                assert!(recommendations.len() >= 0);
+                let _recommendations = security_info.path_configuration.get_recommendations();
+                // assert!(recommendations.len() >= 0);
             }
             Err(_) => {
                 // Security detection can fail in some environments
