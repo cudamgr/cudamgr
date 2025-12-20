@@ -366,9 +366,19 @@ impl CudaInstallation {
         // Check for multiple versions in PATH
         if installations.len() > 1 && system_cuda.is_some() {
             let versions: Vec<String> = installations.iter().map(|i| i.version.clone()).collect();
+            let paths: Vec<String> = installations
+                .iter()
+                .map(|i| i.install_path.display().to_string())
+                .collect();
+
+            let description = format!(
+                "Multiple CUDA versions detected on system. Found at:\n    - {}",
+                paths.join("\n    - ")
+            );
+
             conflicts.push(CudaConflict {
                 conflict_type: ConflictType::MultipleVersionsInPath,
-                description: "Multiple CUDA versions detected on system".to_string(),
+                description,
                 affected_installations: versions,
                 resolution_suggestion:
                     "Use cudamgr to manage CUDA versions and ensure only one is active".to_string(),

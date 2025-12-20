@@ -9,16 +9,24 @@ pub struct CompilerInfo {
     pub version: String,
     pub is_compatible: bool,
     pub path: Option<String>,
+    pub is_in_path: bool,
 }
 
 impl CompilerInfo {
     /// Create a new CompilerInfo instance
-    pub fn new(name: String, version: String, is_compatible: bool, path: Option<String>) -> Self {
+    pub fn new(
+        name: String,
+        version: String,
+        is_compatible: bool,
+        path: Option<String>,
+        is_in_path: bool,
+    ) -> Self {
         Self {
             name,
             version,
             is_compatible,
             path,
+            is_in_path,
         }
     }
 
@@ -68,7 +76,13 @@ impl CompilerInfo {
         // Get gcc path
         let path = Self::get_command_path("gcc");
 
-        Ok(Self::new("GCC".to_string(), version, is_compatible, path))
+        Ok(Self::new(
+            "GCC".to_string(),
+            version,
+            is_compatible,
+            path,
+            true,
+        ))
     }
 
     /// Detect Clang compiler
@@ -92,28 +106,109 @@ impl CompilerInfo {
         // Get clang path
         let path = Self::get_command_path("clang");
 
-        Ok(Self::new("Clang".to_string(), version, is_compatible, path))
+        Ok(Self::new(
+            "Clang".to_string(),
+            version,
+            is_compatible,
+            path,
+            true,
+        ))
     }
 
     /// Detect MSVC compiler on Windows
     #[cfg(target_os = "windows")]
     fn detect_msvc() -> CudaMgrResult<Self> {
-        // Try to detect Visual Studio Build Tools
-        let output = Command::new("cl")
-            .output()
-            .map_err(|e| SystemError::CompilerDetection(format!("Failed to run cl: {}", e)))?;
+        // 1. Try to detect Visual Studio Build Tools via `cl` command first (PATH check)
+        let output = Command::new("cl").output();
 
-        let output_str = String::from_utf8_lossy(&output.stderr);
+        if let Ok(out) = output {
+            let output_str = String::from_utf8_lossy(&out.stderr);
+            if output_str.contains("Microsoft") {
+                let version = Self::parse_msvc_version(&output_str)?;
+                let is_compatible = Self::is_msvc_compatible(&version);
+                let path = Self::get_command_path("cl");
 
-        if output_str.contains("Microsoft") {
-            let version = Self::parse_msvc_version(&output_str)?;
-            let is_compatible = Self::is_msvc_compatible(&version);
-            let path = Self::get_command_path("cl");
-
-            Ok(Self::new("MSVC".to_string(), version, is_compatible, path))
-        } else {
-            Err(SystemError::CompilerDetection("MSVC not found".to_string()).into())
+                return Ok(Self::new(
+                    "MSVC".to_string(),
+                    version,
+                    is_compatible,
+                    path,
+                    true,
+                ));
+            }
         }
+
+        // 2. If not in PATH, try to find it via Visual Studio installation
+        if let Ok(Some(vs_info)) = super::visual_studio::VisualStudioInfo::detect() {
+            if vs_info.has_cpp_tools {
+                // Construct path to cl.exe
+                // Path format: <InstallPath>\VC\Tools\MSVC\<Version>\bin\Hostx64\x64\cl.exe
+                let vc_path = vs_info.install_path.join("VC").join("Tools").join("MSVC");
+
+                if vc_path.exists() {
+                    // Find the latest version directory
+                    if let Ok(entries) = std::fs::read_dir(&vc_path) {
+                        let mut versions: Vec<_> = entries
+                            .filter_map(|e| e.ok())
+                            .filter(|e| e.path().is_dir())
+                            .map(|e| e.file_name().to_string_lossy().to_string())
+                            .collect();
+
+                        // Sort to get latest version
+                        versions.sort_by(|a, b| {
+                            let ver_a = a
+                                .split('.')
+                                .next()
+                                .unwrap_or("0")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            let ver_b = b
+                                .split('.')
+                                .next()
+                                .unwrap_or("0")
+                                .parse::<u32>()
+                                .unwrap_or(0);
+                            ver_b.cmp(&ver_a) // Descending
+                        });
+
+                        if let Some(latest_ver) = versions.first() {
+                            let cl_path = vc_path
+                                .join(latest_ver)
+                                .join("bin")
+                                .join("Hostx64")
+                                .join("x64")
+                                .join("cl.exe");
+
+                            if cl_path.exists() {
+                                // Run this specific cl.exe to get details
+                                let output = Command::new(&cl_path).output().map_err(|e| {
+                                    SystemError::CompilerDetection(format!(
+                                        "Failed to run absolute cl.exe: {}",
+                                        e
+                                    ))
+                                })?;
+
+                                let output_str = String::from_utf8_lossy(&output.stderr);
+                                if output_str.contains("Microsoft") {
+                                    let version = Self::parse_msvc_version(&output_str)?;
+                                    let is_compatible = Self::is_msvc_compatible(&version);
+
+                                    return Ok(Self::new(
+                                        "MSVC".to_string(),
+                                        version,
+                                        is_compatible,
+                                        Some(cl_path.to_string_lossy().to_string()),
+                                        false,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(SystemError::CompilerDetection("MSVC not found".to_string()).into())
     }
 
     /// Parse GCC version from output

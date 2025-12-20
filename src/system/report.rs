@@ -194,6 +194,20 @@ impl SystemReportGenerator {
                         "Compatible compiler {} {} detected",
                         compiler.name, compiler.version
                     ));
+
+                    // Check if compiler is in PATH
+                    if !compiler.is_in_path {
+                        if let Some(path) = &compiler.path {
+                            recommendations.push(format!(
+                                "Compiler found at '{}' but not in PATH. detecting compiler presence in local installation... OK",
+                                path
+                            ));
+                            recommendations.push(format!(
+                                "Action Required: Add directory containing '{}' to your PATH environment variable.",
+                                compiler.name
+                            ));
+                        }
+                    }
                 } else {
                     warnings.push(format!(
                         "Compiler {} {} may not be compatible with CUDA",
@@ -472,7 +486,7 @@ impl fmt::Display for SystemReport {
 
         // Recommendations
         if !self.recommendations.is_empty() {
-            writeln!(f, "=== Recommendations ===")?;
+            writeln!(f, "=== Debug ===")?;
             for recommendation in &self.recommendations {
                 writeln!(f, "  💡 {}", recommendation)?;
             }

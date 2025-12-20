@@ -71,6 +71,7 @@ mod tests {
             "9.4.0".to_string(),
             true,
             Some("/usr/bin/gcc".to_string()),
+            true,
         );
 
         assert_eq!(compiler.name, "GCC");
