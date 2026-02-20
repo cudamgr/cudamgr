@@ -51,11 +51,21 @@ impl InstallArgs {
             return Err(CudaMgrError::Cli("Version cannot be empty".to_string()));
         }
 
-        // Basic version format validation (e.g., "11.8", "12.0")
-        if !self.version.chars().all(|c| c.is_ascii_digit() || c == '.') {
-            return Err(CudaMgrError::Cli(
-                "Invalid version format. Use format like '11.8' or '12.0'".to_string(),
-            ));
+        // Validate version format (X.Y or X.Y.Z)
+        let parts: Vec<&str> = self.version.split('.').collect();
+        if parts.len() < 2 || parts.len() > 3 {
+            return Err(CudaMgrError::Cli(format!(
+                "Invalid version format '{}'. Expected format: X.Y or X.Y.Z (e.g., 12.0 or 12.0.1)",
+                self.version
+            )));
+        }
+        for part in &parts {
+            if part.is_empty() || !part.chars().all(|c| c.is_ascii_digit()) {
+                return Err(CudaMgrError::Cli(format!(
+                    "Invalid version format '{}'. Each segment must be a number",
+                    self.version
+                )));
+            }
         }
 
         Ok(())

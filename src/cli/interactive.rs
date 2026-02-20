@@ -41,22 +41,24 @@ impl Interactive {
 
     /// Ask user to select from a list of options
     pub fn select(message: &str, options: &[String]) -> io::Result<Option<usize>> {
-        OutputFormatter::info(message);
-        for (i, option) in options.iter().enumerate() {
-            println!("  {}. {}", i + 1, option);
-        }
-        print!("Select option (1-{}, or 0 to cancel): ", options.len());
-        io::stdout().flush()?;
+        loop {
+            OutputFormatter::info(message);
+            for (i, option) in options.iter().enumerate() {
+                println!("  {}. {}", i + 1, option);
+            }
+            print!("Select option (1-{}, or 0 to cancel): ", options.len());
+            io::stdout().flush()?;
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
 
-        match input.trim().parse::<usize>() {
-            Ok(0) => Ok(None),
-            Ok(n) if n <= options.len() => Ok(Some(n - 1)),
-            _ => {
-                OutputFormatter::error("Invalid selection");
-                Self::select(message, options)
+            match input.trim().parse::<usize>() {
+                Ok(0) => return Ok(None),
+                Ok(n) if n <= options.len() => return Ok(Some(n - 1)),
+                _ => {
+                    OutputFormatter::error("Invalid selection");
+                    continue;
+                }
             }
         }
     }
@@ -66,22 +68,24 @@ impl Interactive {
         message: &str,
         options: &[(String, String)],
     ) -> io::Result<Option<usize>> {
-        OutputFormatter::info(message);
-        for (i, (option, description)) in options.iter().enumerate() {
-            println!("  {}. {} - {}", i + 1, option, description);
-        }
-        print!("Select option (1-{}, or 0 to cancel): ", options.len());
-        io::stdout().flush()?;
+        loop {
+            OutputFormatter::info(message);
+            for (i, (option, description)) in options.iter().enumerate() {
+                println!("  {}. {} - {}", i + 1, option, description);
+            }
+            print!("Select option (1-{}, or 0 to cancel): ", options.len());
+            io::stdout().flush()?;
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
 
-        match input.trim().parse::<usize>() {
-            Ok(0) => Ok(None),
-            Ok(n) if n <= options.len() => Ok(Some(n - 1)),
-            _ => {
-                OutputFormatter::error("Invalid selection");
-                Self::select_with_description(message, options)
+            match input.trim().parse::<usize>() {
+                Ok(0) => return Ok(None),
+                Ok(n) if n <= options.len() => return Ok(Some(n - 1)),
+                _ => {
+                    OutputFormatter::error("Invalid selection");
+                    continue;
+                }
             }
         }
     }
@@ -133,22 +137,24 @@ impl Interactive {
 
     /// Show multiple choice question
     pub fn multiple_choice(question: &str, choices: &[&str]) -> io::Result<Option<usize>> {
-        OutputFormatter::info(question);
-        for (i, choice) in choices.iter().enumerate() {
-            println!("  {}. {}", i + 1, choice);
-        }
-        print!("Select option (1-{}, or 0 to cancel): ", choices.len());
-        io::stdout().flush()?;
+        loop {
+            OutputFormatter::info(question);
+            for (i, choice) in choices.iter().enumerate() {
+                println!("  {}. {}", i + 1, choice);
+            }
+            print!("Select option (1-{}, or 0 to cancel): ", choices.len());
+            io::stdout().flush()?;
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
 
-        match input.trim().parse::<usize>() {
-            Ok(0) => Ok(None),
-            Ok(n) if n <= choices.len() => Ok(Some(n - 1)),
-            _ => {
-                OutputFormatter::error("Invalid selection");
-                Self::multiple_choice(question, choices)
+            match input.trim().parse::<usize>() {
+                Ok(0) => return Ok(None),
+                Ok(n) if n <= choices.len() => return Ok(Some(n - 1)),
+                _ => {
+                    OutputFormatter::error("Invalid selection");
+                    continue;
+                }
             }
         }
     }

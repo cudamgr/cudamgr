@@ -100,30 +100,34 @@ impl ProgressBar {
         }
     }
 
+    /// Update progress bar
     pub fn update(&mut self, current: u64) {
         self.current = current;
-        let percentage = if self.total > 0 {
-            (self.current * 100) / self.total
-        } else {
-            0
-        };
-
         let elapsed = self.start_time.elapsed();
-        let rate = if elapsed.as_secs() > 0 {
-            self.current / elapsed.as_secs()
+
+        let percentage = if self.total > 0 {
+            (current as f64 / self.total as f64 * 100.0) as u32
         } else {
             0
         };
 
-        // Create progress bar visualization
-        let bar_width = 30usize;
-        let filled = ((percentage * bar_width as u64) / 100) as usize;
-        let empty = bar_width.saturating_sub(filled);
-        let bar = "█".repeat(filled) + &"░".repeat(empty);
+        let rate = if elapsed.as_secs_f64() > 0.0 {
+            self.current as f64 / elapsed.as_secs_f64()
+        } else {
+            0.0
+        };
+
+        let bar_width = 40;
+        let filled = (percentage as usize * bar_width / 100).min(bar_width);
+        let bar: String = "█".repeat(filled) + &"░".repeat(bar_width - filled);
 
         print!(
-            "\r{}: [{}] {}% ({}/{}) {}B/s",
-            self.message, bar, percentage, self.current, self.total, rate
+            "\r  [{}] {}% ({}/{}) {:.0} B/s",
+            bar,
+            percentage,
+            current,
+            self.total,
+            rate
         );
         io::stdout().flush().unwrap();
     }

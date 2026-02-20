@@ -148,39 +148,56 @@ impl CudaInstallation {
     fn detect_components(install_path: &Path) -> CudaMgrResult<Vec<CudaComponent>> {
         let mut components = Vec::new();
 
-        // Essential components
-        let essential_components = [
-            ("NVCC Compiler", "bin/nvcc", true),
-            ("CUDA Runtime", "lib64/libcudart.so", true),
-            ("CUDA Driver API", "lib64/libcuda.so", false),
-            ("cuBLAS", "lib64/libcublas.so", false),
-            ("cuFFT", "lib64/libcufft.so", false),
-            ("cuRAND", "lib64/libcurand.so", false),
-            ("cuSPARSE", "lib64/libcusparse.so", false),
-            ("NPP", "lib64/libnpp.so", false),
-        ];
+        // Platform-aware component paths
+        // On Windows: binaries in bin/, libraries in lib/x64/
+        // On Linux: binaries in bin/, libraries in lib64/
+        let essential_components: Vec<(&str, String, bool)> = if cfg!(windows) {
+            vec![
+                ("NVCC Compiler", "bin/nvcc.exe".to_string(), true),
+                ("CUDA Runtime", "bin/cudart64_12.dll".to_string(), true),
+                ("CUDA Driver API", "lib/x64/cuda.lib".to_string(), false),
+                ("cuBLAS", "lib/x64/cublas.lib".to_string(), false),
+                ("cuFFT", "lib/x64/cufft.lib".to_string(), false),
+                ("cuRAND", "lib/x64/curand.lib".to_string(), false),
+                ("cuSPARSE", "lib/x64/cusparse.lib".to_string(), false),
+                ("NPP", "lib/x64/nppial.lib".to_string(), false),
+            ]
+        } else {
+            vec![
+                ("NVCC Compiler", "bin/nvcc".to_string(), true),
+                ("CUDA Runtime", "lib64/libcudart.so".to_string(), true),
+                ("CUDA Driver API", "lib64/libcuda.so".to_string(), false),
+                ("cuBLAS", "lib64/libcublas.so".to_string(), false),
+                ("cuFFT", "lib64/libcufft.so".to_string(), false),
+                ("cuRAND", "lib64/libcurand.so".to_string(), false),
+                ("cuSPARSE", "lib64/libcusparse.so".to_string(), false),
+                ("NPP", "lib64/libnpp.so".to_string(), false),
+            ]
+        };
 
-        for (name, relative_path, required) in essential_components {
+        for (name, relative_path, required) in &essential_components {
             let component_path = install_path.join(relative_path);
-            let exists = component_path.exists();
 
-            // On Windows, try .dll extension
-            let component_path = if !exists && cfg!(windows) {
-                let dll_path = install_path.join(relative_path.replace(".so", ".dll"));
-                if dll_path.exists() {
-                    dll_path
-                } else {
-                    component_path
-                }
+            // For runtime DLLs on Windows, also check for versioned variants
+            // e.g., cudart64_12.dll might be cudart64_11.dll for older versions
+            let final_path = if !component_path.exists() && cfg!(windows) && relative_path.contains("cudart64_12") {
+                // Try common version suffixes
+                let parent = component_path.parent().unwrap_or(install_path);
+                let alt_names = ["cudart64_11.dll", "cudart64.dll", "cudart.dll"];
+                alt_names
+                    .iter()
+                    .map(|n| parent.join(n))
+                    .find(|p| p.exists())
+                    .unwrap_or(component_path)
             } else {
                 component_path
             };
 
             components.push(CudaComponent {
                 name: name.to_string(),
-                version: "unknown".to_string(), // Could be enhanced to detect individual component versions
-                path: component_path,
-                required,
+                version: "unknown".to_string(),
+                path: final_path,
+                required: *required,
             });
         }
 

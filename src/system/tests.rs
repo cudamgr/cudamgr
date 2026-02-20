@@ -61,7 +61,13 @@ mod tests {
             DriverInfo::get_max_cuda_version("470.86"),
             Some("11.4".to_string())
         );
-        assert_eq!(DriverInfo::get_max_cuda_version("390.48"), None);
+        // Driver 390.48 now maps to CUDA 9.1 (newly added to the table)
+        assert_eq!(
+            DriverInfo::get_max_cuda_version("390.48"),
+            Some("9.1".to_string())
+        );
+        // Very old driver that predates the mapping table
+        assert_eq!(DriverInfo::get_max_cuda_version("350.12"), None);
     }
 
     #[test]

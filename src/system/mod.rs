@@ -75,7 +75,6 @@ impl SystemChecker for DefaultSystemChecker {
         let storage = storage::StorageInfo::detect(&storage_path)?;
 
         // Detect security information
-        // Detect security information
         let security = security::SecurityInfo::detect()?;
 
         // Detect WSL information

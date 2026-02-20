@@ -138,7 +138,7 @@ impl DefaultGpuDetector {
                             let gpu = GpuInfo {
                                 name: name.to_string(),
                                 vendor,
-                                memory_mb: Some(0), // lspci doesn't provide memory info easily
+                                memory_mb: None, // lspci doesn't provide memory info
                                 driver_version: None,
                                 compute_capability,
                                 pci_id,
@@ -157,10 +157,11 @@ impl DefaultGpuDetector {
     }
 
     /// Detect NVIDIA GPUs using nvidia-smi (synchronous version)
+    /// Queries compute_cap directly from the hardware — no hardcoded mapping needed
     pub fn detect_nvidia_smi_sync(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = std::process::Command::new("nvidia-smi")
             .args([
-                "--query-gpu=name,memory.total,driver_version,pci.bus_id",
+                "--query-gpu=name,memory.total,driver_version,pci.bus_id,compute_cap",
                 "--format=csv,noheader,nounits",
             ])
             .output()
@@ -179,13 +180,14 @@ impl DefaultGpuDetector {
             }
 
             let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
-            if parts.len() >= 4 {
+            if parts.len() >= 5 {
                 let name = parts[0].to_string();
                 let memory_mb = parts[1].parse::<u64>().unwrap_or(0);
                 let driver_version = Some(parts[2].to_string());
                 let pci_id = Some(parts[3].to_string());
 
-                let compute_capability = self.get_compute_capability(&name);
+                // Parse compute capability directly from nvidia-smi (e.g., "7.5")
+                let compute_capability = Self::parse_compute_cap(parts[4]);
 
                 let gpu = GpuInfo {
                     name,
@@ -202,11 +204,22 @@ impl DefaultGpuDetector {
         Ok(gpus)
     }
 
-    /// Detect NVIDIA GPUs using nvidia-smi
+    /// Parse compute capability string like "7.5" into (7, 5)
+    fn parse_compute_cap(s: &str) -> Option<(u32, u32)> {
+        let parts: Vec<&str> = s.split('.').collect();
+        if parts.len() == 2 {
+            if let (Ok(major), Ok(minor)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                return Some((major, minor));
+            }
+        }
+        None
+    }
+
+    /// Detect NVIDIA GPUs using nvidia-smi (async version)
     async fn detect_nvidia_smi(&self) -> CudaMgrResult<Vec<GpuInfo>> {
         let output = Command::new("nvidia-smi")
             .args([
-                "--query-gpu=name,memory.total,driver_version,pci.bus_id",
+                "--query-gpu=name,memory.total,driver_version,pci.bus_id,compute_cap",
                 "--format=csv,noheader,nounits",
             ])
             .output();
@@ -222,13 +235,14 @@ impl DefaultGpuDetector {
                     }
 
                     let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
-                    if parts.len() >= 4 {
+                    if parts.len() >= 5 {
                         let name = parts[0].to_string();
                         let memory_mb = parts[1].parse::<u64>().ok();
                         let driver_version = Some(parts[2].to_string());
                         let pci_id = Some(parts[3].to_string());
 
-                        let compute_capability = self.get_compute_capability(&name);
+                        // Parse compute capability directly from nvidia-smi
+                        let compute_capability = Self::parse_compute_cap(parts[4]);
 
                         let gpu = GpuInfo {
                             name,

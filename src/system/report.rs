@@ -50,7 +50,6 @@ impl SystemReportGenerator {
         let storage = super::storage::StorageInfo::detect(&storage_path)?;
 
         // Detect security information
-        // Detect security information
         let security = super::security::SecurityInfo::detect()?;
 
         // Detect WSL information
@@ -438,7 +437,7 @@ impl fmt::Display for SystemReport {
                     "  {} at {} ({} GB)",
                     installation.version,
                     installation.install_path.display(),
-                    installation.size_bytes / (1024 * 1024 * 1024)
+                    installation.size_bytes / (1024_u64 * 1024 * 1024)
                 )?;
             }
             writeln!(f)?;
@@ -486,7 +485,7 @@ impl fmt::Display for SystemReport {
 
         // Recommendations
         if !self.recommendations.is_empty() {
-            writeln!(f, "=== Debug ===")?;
+            writeln!(f, "=== Recommendations ===")?;
             for recommendation in &self.recommendations {
                 writeln!(f, "  💡 {}", recommendation)?;
             }

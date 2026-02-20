@@ -209,23 +209,35 @@ impl DistroInfo {
     pub fn parse_lsb_release(content: &str) -> crate::error::CudaMgrResult<Self> {
         let mut name = String::new();
         let mut version = String::new();
+        let mut id = String::new();
 
         for line in content.lines() {
             if let Some((key, value)) = line.split_once('=') {
                 match key {
                     "DISTRIB_DESCRIPTION" => name = value.trim_matches('"').to_string(),
                     "DISTRIB_RELEASE" => version = value.to_string(),
+                    "DISTRIB_ID" => id = value.trim_matches('"').to_lowercase(),
                     _ => {}
                 }
             }
         }
 
+        let (distro, pkg_mgr) = match id.as_str() {
+            "ubuntu" => (LinuxDistro::Ubuntu(version.clone()), PackageManager::Apt),
+            "debian" => (LinuxDistro::Debian(version.clone()), PackageManager::Apt),
+            "centos" => (LinuxDistro::CentOS(version.clone()), PackageManager::Yum),
+            "fedora" => (LinuxDistro::Fedora(version.clone()), PackageManager::Dnf),
+            "arch" => (LinuxDistro::Arch(version.clone()), PackageManager::Pacman),
+            "opensuse" | "suse" => (LinuxDistro::SUSE(version.clone()), PackageManager::Zypper),
+            _ => (LinuxDistro::Generic(name.clone()), PackageManager::Unknown),
+        };
+
         Ok(Self::new(
-            OsType::Linux(LinuxDistro::Generic(name.clone())),
+            OsType::Linux(distro),
             name,
             version,
             None,
-            PackageManager::Unknown,
+            pkg_mgr,
         ))
     }
 
@@ -249,7 +261,9 @@ impl DistroInfo {
     fn detect_kernel_version() -> Option<String> {
         use std::process::Command;
 
-        Command::new("ver")
+        // "ver" is a CMD built-in, not a standalone executable
+        Command::new("cmd")
+            .args(["/C", "ver"])
             .output()
             .ok()
             .filter(|output| output.status.success())

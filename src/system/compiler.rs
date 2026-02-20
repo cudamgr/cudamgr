@@ -154,21 +154,20 @@ impl CompilerInfo {
                             .map(|e| e.file_name().to_string_lossy().to_string())
                             .collect();
 
-                        // Sort to get latest version
+                        // Sort to get latest version (compare full semantic version)
                         versions.sort_by(|a, b| {
-                            let ver_a = a
-                                .split('.')
-                                .next()
-                                .unwrap_or("0")
-                                .parse::<u32>()
-                                .unwrap_or(0);
-                            let ver_b = b
-                                .split('.')
-                                .next()
-                                .unwrap_or("0")
-                                .parse::<u32>()
-                                .unwrap_or(0);
-                            ver_b.cmp(&ver_a) // Descending
+                            let parts_a: Vec<u32> = a.split('.').filter_map(|s| s.parse().ok()).collect();
+                            let parts_b: Vec<u32> = b.split('.').filter_map(|s| s.parse().ok()).collect();
+                            let max_len = parts_a.len().max(parts_b.len());
+                            for i in 0..max_len {
+                                let va = parts_a.get(i).unwrap_or(&0);
+                                let vb = parts_b.get(i).unwrap_or(&0);
+                                match vb.cmp(va) {
+                                    std::cmp::Ordering::Equal => continue,
+                                    other => return other, // Descending
+                                }
+                            }
+                            std::cmp::Ordering::Equal
                         });
 
                         if let Some(latest_ver) = versions.first() {
@@ -315,13 +314,17 @@ impl CompilerInfo {
 
     /// Get the full path of a command
     fn get_command_path(command: &str) -> Option<String> {
-        Command::new("which")
+        let lookup_cmd = if cfg!(windows) { "where" } else { "which" };
+        Command::new(lookup_cmd)
             .arg(command)
             .output()
             .ok()
             .filter(|output| output.status.success())
             .and_then(|output| String::from_utf8(output.stdout).ok())
-            .map(|path| path.trim().to_string())
+            .map(|path| {
+                // On Windows, `where` may return multiple lines; take the first
+                path.lines().next().unwrap_or("").trim().to_string()
+            })
             .filter(|path| !path.is_empty())
     }
 }
