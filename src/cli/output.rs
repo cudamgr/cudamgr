@@ -123,11 +123,7 @@ impl ProgressBar {
 
         print!(
             "\r  [{}] {}% ({}/{}) {:.0} B/s",
-            bar,
-            percentage,
-            current,
-            self.total,
-            rate
+            bar, percentage, current, self.total, rate
         );
         io::stdout().flush().unwrap();
     }

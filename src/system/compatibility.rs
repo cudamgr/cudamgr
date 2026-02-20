@@ -41,87 +41,149 @@ impl CompatibilityRegistry {
 
         // RTX 50 series (Blackwell)
         for model in [
-            "rtx 5090", "rtx 5080", "rtx 5070 ti", "rtx 5070", "rtx 5060 ti", "rtx 5060",
+            "rtx 5090",
+            "rtx 5080",
+            "rtx 5070 ti",
+            "rtx 5070",
+            "rtx 5060 ti",
+            "rtx 5060",
         ] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Blackwell".to_string(),
-                compute_capability: (12, 0),
-                min_driver_version: Some("570.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Blackwell".to_string(),
+                    compute_capability: (12, 0),
+                    min_driver_version: Some("570.00".to_string()),
+                },
+            );
         }
 
         // RTX 40 series (Ada Lovelace)
         for model in [
-            "rtx 4090", "rtx 4080 super", "rtx 4080", "rtx 4070 ti super", "rtx 4070 ti",
-            "rtx 4070 super", "rtx 4070", "rtx 4060 ti", "rtx 4060",
+            "rtx 4090",
+            "rtx 4080 super",
+            "rtx 4080",
+            "rtx 4070 ti super",
+            "rtx 4070 ti",
+            "rtx 4070 super",
+            "rtx 4070",
+            "rtx 4060 ti",
+            "rtx 4060",
         ] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Ada Lovelace".to_string(),
-                compute_capability: (8, 9),
-                min_driver_version: Some("520.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Ada Lovelace".to_string(),
+                    compute_capability: (8, 9),
+                    min_driver_version: Some("520.00".to_string()),
+                },
+            );
         }
 
         // RTX 30 series (Ampere)
         for model in [
-            "rtx 3090 ti", "rtx 3090", "rtx 3080 ti", "rtx 3080",
-            "rtx 3070 ti", "rtx 3070", "rtx 3060 ti", "rtx 3060", "rtx 3050",
+            "rtx 3090 ti",
+            "rtx 3090",
+            "rtx 3080 ti",
+            "rtx 3080",
+            "rtx 3070 ti",
+            "rtx 3070",
+            "rtx 3060 ti",
+            "rtx 3060",
+            "rtx 3050",
         ] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Ampere".to_string(),
-                compute_capability: (8, 6),
-                min_driver_version: Some("450.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Ampere".to_string(),
+                    compute_capability: (8, 6),
+                    min_driver_version: Some("450.00".to_string()),
+                },
+            );
         }
 
         // RTX 20 series (Turing)
         for model in [
-            "rtx 2080 ti", "rtx 2080 super", "rtx 2080",
-            "rtx 2070 super", "rtx 2070", "rtx 2060 super", "rtx 2060",
-            "quadro rtx 8000", "quadro rtx 6000", "quadro rtx 5000", "quadro rtx 4000",
+            "rtx 2080 ti",
+            "rtx 2080 super",
+            "rtx 2080",
+            "rtx 2070 super",
+            "rtx 2070",
+            "rtx 2060 super",
+            "rtx 2060",
+            "quadro rtx 8000",
+            "quadro rtx 6000",
+            "quadro rtx 5000",
+            "quadro rtx 4000",
         ] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Turing".to_string(),
-                compute_capability: (7, 5),
-                min_driver_version: Some("410.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Turing".to_string(),
+                    compute_capability: (7, 5),
+                    min_driver_version: Some("410.00".to_string()),
+                },
+            );
         }
 
         // GTX 16 series (Turing, no RT cores)
-        for model in ["gtx 1660 ti", "gtx 1660 super", "gtx 1660", "gtx 1650 super", "gtx 1650", "gtx 1630"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Turing".to_string(),
-                compute_capability: (7, 5),
-                min_driver_version: Some("418.00".to_string()),
-            });
+        for model in [
+            "gtx 1660 ti",
+            "gtx 1660 super",
+            "gtx 1660",
+            "gtx 1650 super",
+            "gtx 1650",
+            "gtx 1630",
+        ] {
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Turing".to_string(),
+                    compute_capability: (7, 5),
+                    min_driver_version: Some("418.00".to_string()),
+                },
+            );
         }
 
         // GTX 10 series (Pascal)
         for model in [
-            "titan xp", "titan x", "gtx 1080 ti", "gtx 1080", "gtx 1070 ti", "gtx 1070",
-            "gtx 1060", "gtx 1050 ti", "gtx 1050",
+            "titan xp",
+            "titan x",
+            "gtx 1080 ti",
+            "gtx 1080",
+            "gtx 1070 ti",
+            "gtx 1070",
+            "gtx 1060",
+            "gtx 1050 ti",
+            "gtx 1050",
         ] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Pascal".to_string(),
-                compute_capability: (6, 1),
-                min_driver_version: Some("367.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Pascal".to_string(),
+                    compute_capability: (6, 1),
+                    min_driver_version: Some("367.00".to_string()),
+                },
+            );
         }
 
         // GTX 9 series (Maxwell)
         for model in ["gtx 980 ti", "gtx 980", "gtx 970", "gtx 960", "gtx 950"] {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: "Maxwell".to_string(),
-                compute_capability: (5, 2),
-                min_driver_version: Some("340.00".to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: "Maxwell".to_string(),
+                    compute_capability: (5, 2),
+                    min_driver_version: Some("340.00".to_string()),
+                },
+            );
         }
 
         // Datacenter / Professional GPUs
@@ -162,12 +224,15 @@ impl CompatibilityRegistry {
         ];
 
         for (model, arch, cc, min_driver) in datacenter_gpus {
-            gpu_architectures.insert(model.to_string(), GpuArchitecture {
-                name: model.to_string(),
-                architecture: arch.to_string(),
-                compute_capability: cc,
-                min_driver_version: min_driver.map(|v: &str| v.to_string()),
-            });
+            gpu_architectures.insert(
+                model.to_string(),
+                GpuArchitecture {
+                    name: model.to_string(),
+                    architecture: arch.to_string(),
+                    compute_capability: cc,
+                    min_driver_version: min_driver.map(|v: &str| v.to_string()),
+                },
+            );
         }
 
         // Driver Version -> Max CUDA Version mapping (FALLBACK ONLY)
@@ -250,10 +315,7 @@ impl CompatibilityRegistry {
         // Try prefix match first (handles exact major.minor matching)
         for (prefix, cuda_ver) in &self.driver_cuda_map {
             // Extract the major from the prefix (e.g., "570." -> 570)
-            let prefix_major: u32 = prefix
-                .trim_end_matches('.')
-                .parse()
-                .unwrap_or(0);
+            let prefix_major: u32 = prefix.trim_end_matches('.').parse().unwrap_or(0);
 
             if driver_major >= prefix_major {
                 return Some(cuda_ver.clone());

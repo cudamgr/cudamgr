@@ -156,8 +156,10 @@ impl CompilerInfo {
 
                         // Sort to get latest version (compare full semantic version)
                         versions.sort_by(|a, b| {
-                            let parts_a: Vec<u32> = a.split('.').filter_map(|s| s.parse().ok()).collect();
-                            let parts_b: Vec<u32> = b.split('.').filter_map(|s| s.parse().ok()).collect();
+                            let parts_a: Vec<u32> =
+                                a.split('.').filter_map(|s| s.parse().ok()).collect();
+                            let parts_b: Vec<u32> =
+                                b.split('.').filter_map(|s| s.parse().ok()).collect();
                             let max_len = parts_a.len().max(parts_b.len());
                             for i in 0..max_len {
                                 let va = parts_a.get(i).unwrap_or(&0);

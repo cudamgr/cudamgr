@@ -180,7 +180,10 @@ impl CudaInstallation {
 
             // For runtime DLLs on Windows, also check for versioned variants
             // e.g., cudart64_12.dll might be cudart64_11.dll for older versions
-            let final_path = if !component_path.exists() && cfg!(windows) && relative_path.contains("cudart64_12") {
+            let final_path = if !component_path.exists()
+                && cfg!(windows)
+                && relative_path.contains("cudart64_12")
+            {
                 // Try common version suffixes
                 let parent = component_path.parent().unwrap_or(install_path);
                 let alt_names = ["cudart64_11.dll", "cudart64.dll", "cudart.dll"];
