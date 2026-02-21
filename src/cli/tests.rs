@@ -59,14 +59,20 @@ mod tests {
 
     #[test]
     fn test_doctor_args_validation() {
-        let args = DoctorArgs { verbose: true };
+        let args = DoctorArgs {
+            verbose: true,
+            update_registry: false,
+        };
         assert!(args.validate().is_ok());
     }
 
     #[test]
     fn test_command_handlers_exist() {
         // Test that all handlers can be created
-        let _doctor_handler = DoctorHandler::new(DoctorArgs { verbose: false });
+        let _doctor_handler = DoctorHandler::new(DoctorArgs {
+            verbose: false,
+            update_registry: false,
+        });
         let _install_handler = InstallHandler::new(InstallArgs {
             version: "11.8".to_string(),
             force: false,
@@ -130,7 +136,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_doctor_handler_execution() {
-        let handler = DoctorHandler::new(DoctorArgs { verbose: false });
+        let handler = DoctorHandler::new(DoctorArgs {
+            verbose: false,
+            update_registry: false,
+        });
 
         // Execute the handler - it should not panic
         let result = handler.execute().await;

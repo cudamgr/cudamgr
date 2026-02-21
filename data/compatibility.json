@@ -1,0 +1,515 @@
+{
+  "schema_version": 1,
+  "last_updated": "2026-02-21",
+  "source": "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/",
+  "gpu_architectures": {
+    "rtx 5090": {
+      "name": "RTX 5090",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 5080": {
+      "name": "RTX 5080",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 5070 ti": {
+      "name": "RTX 5070 Ti",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 5070": {
+      "name": "RTX 5070",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 5060 ti": {
+      "name": "RTX 5060 Ti",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 5060": {
+      "name": "RTX 5060",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": "570.00"
+    },
+    "rtx 4090": {
+      "name": "RTX 4090",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4080 super": {
+      "name": "RTX 4080 SUPER",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4080": {
+      "name": "RTX 4080",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4070 ti super": {
+      "name": "RTX 4070 Ti SUPER",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4070 ti": {
+      "name": "RTX 4070 Ti",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4070 super": {
+      "name": "RTX 4070 SUPER",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4070": {
+      "name": "RTX 4070",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4060 ti": {
+      "name": "RTX 4060 Ti",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 4060": {
+      "name": "RTX 4060",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": "520.00"
+    },
+    "rtx 3090 ti": {
+      "name": "RTX 3090 Ti",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3090": {
+      "name": "RTX 3090",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3080 ti": {
+      "name": "RTX 3080 Ti",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3080": {
+      "name": "RTX 3080",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3070 ti": {
+      "name": "RTX 3070 Ti",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3070": {
+      "name": "RTX 3070",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3060 ti": {
+      "name": "RTX 3060 Ti",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3060": {
+      "name": "RTX 3060",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 3050": {
+      "name": "RTX 3050",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": "450.00"
+    },
+    "rtx 2080 ti": {
+      "name": "RTX 2080 Ti",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2080 super": {
+      "name": "RTX 2080 SUPER",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2080": {
+      "name": "RTX 2080",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2070 super": {
+      "name": "RTX 2070 SUPER",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2070": {
+      "name": "RTX 2070",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2060 super": {
+      "name": "RTX 2060 SUPER",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "rtx 2060": {
+      "name": "RTX 2060",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "quadro rtx 8000": {
+      "name": "Quadro RTX 8000",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "quadro rtx 6000": {
+      "name": "Quadro RTX 6000",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "quadro rtx 5000": {
+      "name": "Quadro RTX 5000",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "quadro rtx 4000": {
+      "name": "Quadro RTX 4000",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "410.00"
+    },
+    "gtx 1660 ti": {
+      "name": "GTX 1660 Ti",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "gtx 1660 super": {
+      "name": "GTX 1660 SUPER",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "gtx 1660": {
+      "name": "GTX 1660",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "gtx 1650 super": {
+      "name": "GTX 1650 SUPER",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "gtx 1650": {
+      "name": "GTX 1650",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "gtx 1630": {
+      "name": "GTX 1630",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": "418.00"
+    },
+    "titan xp": {
+      "name": "TITAN Xp",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "titan x": {
+      "name": "TITAN X",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1080 ti": {
+      "name": "GTX 1080 Ti",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1080": {
+      "name": "GTX 1080",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1070 ti": {
+      "name": "GTX 1070 Ti",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1070": {
+      "name": "GTX 1070",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1060": {
+      "name": "GTX 1060",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1050 ti": {
+      "name": "GTX 1050 Ti",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 1050": {
+      "name": "GTX 1050",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": "367.00"
+    },
+    "gtx 980 ti": {
+      "name": "GTX 980 Ti",
+      "architecture": "Maxwell",
+      "compute_capability": [5, 2],
+      "min_driver_version": "340.00"
+    },
+    "gtx 980": {
+      "name": "GTX 980",
+      "architecture": "Maxwell",
+      "compute_capability": [5, 2],
+      "min_driver_version": "340.00"
+    },
+    "gtx 970": {
+      "name": "GTX 970",
+      "architecture": "Maxwell",
+      "compute_capability": [5, 2],
+      "min_driver_version": "340.00"
+    },
+    "gtx 960": {
+      "name": "GTX 960",
+      "architecture": "Maxwell",
+      "compute_capability": [5, 2],
+      "min_driver_version": "340.00"
+    },
+    "gtx 950": {
+      "name": "GTX 950",
+      "architecture": "Maxwell",
+      "compute_capability": [5, 2],
+      "min_driver_version": "340.00"
+    },
+    "b200": {
+      "name": "B200",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": null
+    },
+    "b100": {
+      "name": "B100",
+      "architecture": "Blackwell",
+      "compute_capability": [12, 0],
+      "min_driver_version": null
+    },
+    "h200": {
+      "name": "H200",
+      "architecture": "Hopper",
+      "compute_capability": [9, 0],
+      "min_driver_version": null
+    },
+    "h100": {
+      "name": "H100",
+      "architecture": "Hopper",
+      "compute_capability": [9, 0],
+      "min_driver_version": null
+    },
+    "l40s": {
+      "name": "L40S",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": null
+    },
+    "l40": {
+      "name": "L40",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": null
+    },
+    "l4": {
+      "name": "L4",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": null
+    },
+    "rtx 6000 ada": {
+      "name": "RTX 6000 Ada",
+      "architecture": "Ada Lovelace",
+      "compute_capability": [8, 9],
+      "min_driver_version": null
+    },
+    "a100": {
+      "name": "A100",
+      "architecture": "Ampere",
+      "compute_capability": [8, 0],
+      "min_driver_version": null
+    },
+    "a30": {
+      "name": "A30",
+      "architecture": "Ampere",
+      "compute_capability": [8, 0],
+      "min_driver_version": null
+    },
+    "a10": {
+      "name": "A10",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "a16": {
+      "name": "A16",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "a2": {
+      "name": "A2",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "rtx a6000": {
+      "name": "RTX A6000",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "rtx a5000": {
+      "name": "RTX A5000",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "rtx a4000": {
+      "name": "RTX A4000",
+      "architecture": "Ampere",
+      "compute_capability": [8, 6],
+      "min_driver_version": null
+    },
+    "t4": {
+      "name": "T4",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": null
+    },
+    "quadro rtx": {
+      "name": "Quadro RTX",
+      "architecture": "Turing",
+      "compute_capability": [7, 5],
+      "min_driver_version": null
+    },
+    "tesla v100": {
+      "name": "Tesla V100",
+      "architecture": "Volta",
+      "compute_capability": [7, 0],
+      "min_driver_version": null
+    },
+    "titan v": {
+      "name": "TITAN V",
+      "architecture": "Volta",
+      "compute_capability": [7, 0],
+      "min_driver_version": null
+    },
+    "tesla p100": {
+      "name": "Tesla P100",
+      "architecture": "Pascal",
+      "compute_capability": [6, 0],
+      "min_driver_version": null
+    },
+    "tesla p40": {
+      "name": "Tesla P40",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": null
+    },
+    "tesla p4": {
+      "name": "Tesla P4",
+      "architecture": "Pascal",
+      "compute_capability": [6, 1],
+      "min_driver_version": null
+    },
+    "tesla k80": {
+      "name": "Tesla K80",
+      "architecture": "Kepler",
+      "compute_capability": [3, 7],
+      "min_driver_version": null
+    },
+    "tesla k40": {
+      "name": "Tesla K40",
+      "architecture": "Kepler",
+      "compute_capability": [3, 5],
+      "min_driver_version": null
+    }
+  },
+  "driver_cuda_map": [
+    ["590", "13.1"],
+    ["580", "13.0"],
+    ["575", "12.9"],
+    ["570", "12.8"],
+    ["560", "12.6"],
+    ["555", "12.5"],
+    ["550", "12.4"],
+    ["545", "12.3"],
+    ["535", "12.2"],
+    ["530", "12.1"],
+    ["525", "12.0"],
+    ["520", "11.8"],
+    ["515", "11.7"],
+    ["510", "11.6"],
+    ["495", "11.5"],
+    ["470", "11.4"],
+    ["465", "11.3"],
+    ["460", "11.2"],
+    ["455", "11.1"],
+    ["450", "11.0"],
+    ["440", "10.2"],
+    ["418", "10.1"],
+    ["410", "10.0"],
+    ["396", "9.2"],
+    ["390", "9.1"],
+    ["384", "9.0"]
+  ]
+}

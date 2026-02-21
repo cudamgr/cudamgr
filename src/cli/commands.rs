@@ -24,6 +24,10 @@ pub struct DoctorArgs {
     /// Show detailed system information
     #[arg(short, long)]
     pub verbose: bool,
+
+    /// Update the compatibility registry from remote before checking
+    #[arg(long)]
+    pub update_registry: bool,
 }
 
 impl DoctorArgs {
@@ -229,9 +233,31 @@ impl DoctorHandler {
 #[async_trait]
 impl CommandHandler for DoctorHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
+        use crate::system::compatibility::CompatibilityRegistry;
         use crate::system::SystemReportGenerator;
 
         tracing::info!("Running system doctor with verbose: {}", self.args.verbose);
+
+        // Update compatibility registry if requested
+        if self.args.update_registry {
+            OutputFormatter::info("Updating compatibility registry from remote...");
+            let mut registry = CompatibilityRegistry::new();
+            match registry.update_from_remote().await {
+                Ok(true) => {
+                    OutputFormatter::success("Registry updated successfully");
+                }
+                Ok(false) => {
+                    OutputFormatter::info("Registry is already up to date");
+                }
+                Err(e) => {
+                    OutputFormatter::warning(&format!(
+                        "Failed to update registry (using cached/built-in): {}",
+                        e
+                    ));
+                }
+            }
+        }
+
         OutputFormatter::info("Running comprehensive system compatibility check...");
 
         // Generate comprehensive system report
