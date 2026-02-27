@@ -1,6 +1,7 @@
 pub mod cleanup;
 pub mod downloader;
 pub mod installer;
+pub mod redist;
 pub mod validator;
 
 use crate::error::{CudaMgrResult, InstallError};

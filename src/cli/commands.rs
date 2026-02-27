@@ -3,6 +3,11 @@ use crate::error::{CudaMgrError, CudaMgrResult};
 use async_trait::async_trait;
 use clap::Subcommand;
 
+use crate::install::downloader::PackageDownloader;
+use crate::install::redist;
+use crate::system::compatibility::{CompatibilityRegistry, REGISTRY};
+use crate::system::cuda::CudaInstallation;
+
 #[derive(Subcommand)]
 pub enum Command {
     /// Check system compatibility for CUDA installation
@@ -13,6 +18,8 @@ pub enum Command {
     Use(UseArgs),
     /// List installed and available CUDA versions
     List(ListArgs),
+    /// Download CUDA toolkit redistributables (one or more versions) in one go
+    Download(DownloadArgs),
     /// Uninstall a CUDA version
     Uninstall(UninstallArgs),
     /// View logs and debugging information
@@ -120,6 +127,40 @@ impl ListArgs {
 }
 
 #[derive(clap::Args)]
+pub struct DownloadArgs {
+    /// CUDA version(s) to download (e.g. 11.8 12.0 12.6)
+    #[arg(value_name = "VERSION")]
+    pub versions: Vec<String>,
+
+    /// Download all versions from the compatibility registry
+    #[arg(long)]
+    pub all: bool,
+
+    /// Directory to save downloads (default: cache under cudamgr data dir)
+    #[arg(short, long, value_name = "DIR")]
+    pub output_dir: Option<std::path::PathBuf>,
+}
+
+impl DownloadArgs {
+    pub fn validate(&self) -> CudaMgrResult<()> {
+        if !self.all && self.versions.is_empty() {
+            return Err(CudaMgrError::Cli(
+                "Specify at least one VERSION or use --all".to_string(),
+            ));
+        }
+        for v in &self.versions {
+            if v.is_empty() || !v.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                return Err(CudaMgrError::Cli(format!(
+                    "Invalid version '{}'. Use format like 11.8 or 12.0",
+                    v
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(clap::Args)]
 pub struct UninstallArgs {
     /// CUDA version to uninstall
     pub version: String,
@@ -196,6 +237,7 @@ impl CommandRouter {
             Command::Install(args) => InstallHandler::new(args).execute().await,
             Command::Use(args) => UseHandler::new(args).execute().await,
             Command::List(args) => ListHandler::new(args).execute().await,
+            Command::Download(args) => DownloadHandler::new(args).execute().await,
             Command::Uninstall(args) => UninstallHandler::new(args).execute().await,
             Command::Logs(args) => LogsHandler::new(args).execute().await,
         }
@@ -213,6 +255,7 @@ impl Command {
             Command::Install(args) => args.validate(),
             Command::Use(args) => args.validate(),
             Command::List(args) => args.validate(),
+            Command::Download(args) => args.validate(),
             Command::Uninstall(args) => args.validate(),
             Command::Logs(args) => args.validate(),
         }
@@ -471,13 +514,203 @@ impl ListHandler {
 impl CommandHandler for ListHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Listing CUDA versions, available: {}", self.args.available);
-        OutputFormatter::info("Listing CUDA versions...");
 
-        // TODO: Implement actual list functionality
-        OutputFormatter::warning("List command implementation pending");
-        Err(CudaMgrError::Cli(
-            "List command not yet implemented".to_string(),
-        ))
+        if self.args.available {
+            Self::list_available(&self.args.verbose);
+        } else {
+            Self::list_installed(&self.args.verbose)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl ListHandler {
+    /// List CUDA versions that can be installed (from compatibility registry).
+    fn list_available(verbose: &bool) {
+        OutputFormatter::section("Available CUDA versions (installable)");
+
+        if *verbose {
+            let with_driver = REGISTRY.available_cuda_versions_with_min_driver();
+            if with_driver.is_empty() {
+                println!("  No version data in registry.");
+                return;
+            }
+            println!("  {:<12} Min. driver", "Version");
+            println!("  {}", "─".repeat(24));
+            for (cuda, min_driver) in with_driver {
+                println!("  {:<12} {}", cuda, min_driver);
+            }
+        } else {
+            let versions = REGISTRY.available_cuda_versions();
+            if versions.is_empty() {
+                println!("  No version data in registry.");
+                return;
+            }
+            for v in versions {
+                println!("  {}", v);
+            }
+        }
+
+        println!("\n  Run 'cudamgr install <version>' to install (when implemented).");
+    }
+
+    /// List CUDA versions currently installed on the system.
+    fn list_installed(verbose: &bool) -> CudaMgrResult<()> {
+        let result = CudaInstallation::detect_all_installations()?;
+
+        OutputFormatter::section("Installed CUDA versions");
+
+        if result.installations.is_empty() {
+            println!("  No CUDA installations found.");
+            if let Some(system) = &result.system_cuda {
+                if let Some(v) = &system.nvcc_version {
+                    println!("  nvcc in PATH: {} (source not under cudamgr)", v);
+                }
+            }
+            println!("\n  Run 'cudamgr list --available' to see installable versions.");
+            return Ok(());
+        }
+
+        if *verbose {
+            println!("  {:<10} {:<12} Path", "Version", "Size");
+            println!("  {}", "─".repeat(50));
+            for inst in &result.installations {
+                let size_gb = inst.size_bytes / (1024 * 1024 * 1024);
+                let size_str = format!("{} GB", size_gb);
+                let valid = if inst.is_valid() { "✓" } else { "incomplete" };
+                println!(
+                    "  {:<10} {:<12} {} {}",
+                    inst.version,
+                    size_str,
+                    inst.install_path.display(),
+                    valid
+                );
+            }
+        } else {
+            for inst in &result.installations {
+                let active = if result
+                    .system_cuda
+                    .as_ref()
+                    .is_some_and(|s| s.nvcc_version.as_deref() == Some(inst.version.as_str()))
+                {
+                    " (active in PATH)"
+                } else {
+                    ""
+                };
+                println!("  {}  {}", inst.version, inst.install_path.display());
+                if !active.is_empty() {
+                    println!("      ^ active in PATH");
+                }
+            }
+        }
+
+        if let Some(system) = &result.system_cuda {
+            if let (Some(nvcc_ver), Some(path)) = (&system.nvcc_version, &system.nvcc_path) {
+                let in_list = result.installations.iter().any(|i| i.version == *nvcc_ver);
+                if !in_list {
+                    println!(
+                        "\n  System nvcc in PATH: {} at {}",
+                        nvcc_ver,
+                        path.display()
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+pub struct DownloadHandler {
+    args: DownloadArgs,
+}
+
+impl DownloadHandler {
+    pub fn new(args: DownloadArgs) -> Self {
+        Self { args }
+    }
+}
+
+#[async_trait]
+impl CommandHandler for DownloadHandler {
+    async fn execute(&self) -> CudaMgrResult<()> {
+        let versions: Vec<String> = if self.args.all {
+            REGISTRY.available_cuda_versions()
+        } else {
+            self.args.versions.clone()
+        };
+
+        if versions.is_empty() {
+            OutputFormatter::warning("No versions to download");
+            return Ok(());
+        }
+
+        let base_dir = self.args.output_dir.clone().unwrap_or_else(|| {
+            CompatibilityRegistry::cache_path()
+                .parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join("downloads")
+        });
+
+        std::fs::create_dir_all(&base_dir)
+            .map_err(|e| CudaMgrError::Cli(format!("Create output dir: {}", e)))?;
+
+        let downloader = PackageDownloader::new();
+        let client = reqwest::Client::new();
+        let base_url = PackageDownloader::redist_base_url();
+
+        OutputFormatter::section("Downloading CUDA redistributables");
+        println!("  Output directory: {}", base_dir.display());
+        println!("  Versions: {}", versions.join(", "));
+        println!();
+
+        let mut total_files = 0usize;
+        let mut failed = Vec::new();
+
+        for version in &versions {
+            let (full_version, paths) =
+                match redist::resolve_version_to_redist_paths(version, &client).await {
+                    Ok(x) => x,
+                    Err(e) => {
+                        OutputFormatter::warning(&format!("{}: {}", version, e));
+                        failed.push(version.clone());
+                        continue;
+                    }
+                };
+
+            let version_dir = base_dir.join(&full_version);
+            std::fs::create_dir_all(&version_dir)
+                .map_err(|e| CudaMgrError::Cli(format!("Create version dir: {}", e)))?;
+
+            for rel_path in &paths {
+                let url = format!("{}/{}", base_url, rel_path);
+                let filename = rel_path.rsplit('/').next().unwrap_or(rel_path);
+                let dest = version_dir.join(filename);
+                total_files += 1;
+                print!("  [{}] {} ... ", full_version, filename);
+                std::io::Write::flush(&mut std::io::stdout()).ok();
+                match downloader.download(&url, &dest).await {
+                    Ok(()) => println!("OK"),
+                    Err(e) => {
+                        println!("FAILED: {}", e);
+                        failed.push(version.clone());
+                    }
+                }
+            }
+        }
+
+        println!();
+        OutputFormatter::success(&format!(
+            "Downloaded {} files for {} version(s)",
+            total_files,
+            versions.len().saturating_sub(failed.len())
+        ));
+        if !failed.is_empty() {
+            OutputFormatter::warning(&format!("Some versions had errors: {}", failed.join(", ")));
+        }
+
+        Ok(())
     }
 }
 

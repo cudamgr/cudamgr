@@ -1,5 +1,6 @@
 # CudaMgr
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=flat&logo=discord&logoColor=white)](https://discord.gg/Kr7NdB5Qvu)
+[![Star History Chart](https://api.star-history.com/svg?repos=cudamgr/cudamgr&type=date&legend=top-left)](https://www.star-history.com/#cudamgr/cudamgr&type=date&legend=top-left)
 
 A cross-platform CUDA version manager that simplifies installing, managing, and switching between different CUDA toolkit versions.
 
@@ -11,6 +12,24 @@ A cross-platform CUDA version manager that simplifies installing, managing, and 
 
 - Rust 1.70+ ([Install Rust](https://rustup.rs/))
 - Git
+
+### Supported platforms
+
+CudaMgr is built to work on **both Windows and Linux**:
+
+| Platform | Supported | Notes |
+|----------|-----------|--------|
+| **Windows** (x86_64) | ✅ | Uses `%LOCALAPPDATA%\cudamgr` for cache/downloads. GPU/driver detection via NVIDIA APIs; Visual Studio detection on Windows. |
+| **Linux** (x86_64) | ✅ | Uses `~/.local/share/cudamgr` (or `~/.cudamgr`) for cache/downloads. Distro detection (Ubuntu, RHEL, Fedora, etc.), `nvidia-smi` for GPU/driver. |
+
+- **`doctor`**, **`list`**, and **`download`** work on both. Download fetches the correct artifacts per OS (Windows `.zip`/installers vs Linux `.tar.xz` from NVIDIA’s redist manifest).
+- **Other architectures** (e.g. Linux aarch64/ARM): the CLI builds, but the download command currently resolves **x86_64** artifacts only; 32-bit Windows is not targeted.
+## Star History
+
+![Star History Chart](https://api.star-history.com/svg?repos=cudamgr/cudamgr&type=date&legend=top-left)](https://www.star-history.com/#cudamgr/cudamgr&type=date&legend=top-left)
+
+
+
 
 ### Installation
 
@@ -26,19 +45,28 @@ cargo build --release
 # Check system compatibility
 cargo run -- doctor --verbose
 
+# List available CUDA versions
+cargo run -- list --available
+
+# Download one or more CUDA versions (redistributables)
+cargo run -- download 11.8 12.0 12.6
+cargo run -- download --all
+
 # Get help for any command
 cargo run -- --help
 cargo run -- install --help
+cargo run -- download --help
 ```
 
 ## 📋 Commands
 
 | Command | Description | Status |
 |---------|-------------|--------|
-| `doctor` | Check system compatibility for CUDA | 🚧 Coming Soon |
+| `doctor` | Check system compatibility for CUDA | ✅ Available |
 | `install <version>` | Install a specific CUDA version | 🚧 Coming Soon |
 | `use <version>` | Switch to a CUDA version | 🚧 Coming Soon |
-| `list` | List installed and available versions | 🚧 Coming Soon |
+| `list` | List installed and available versions | ✅ Available |
+| `download [VERSION]...` | Download CUDA redistributables in one go | ✅ Available |
 | `uninstall <version>` | Remove a CUDA version | 🚧 Coming Soon |
 | `logs` | View installation logs | 🚧 Coming Soon |
 
@@ -54,8 +82,12 @@ cudamgr install 11.8 --force
 # Switch to CUDA 12.0 (coming soon)
 cudamgr use 12.0
 
-# List all versions (coming soon)
+# List all versions (installed by default; use --available for installable)
 cudamgr list --available
+
+# Download one or more CUDA versions in one go (redistributables)
+cudamgr download 11.8 12.0 12.6
+cudamgr download --all   # all versions from registry
 ```
 
 ## 🧪 Testing the CLI
@@ -66,10 +98,12 @@ cudamgr list --available
 # Test help system
 cargo run -- --help
 cargo run -- doctor --help
+cargo run -- download --help
 
 # Test command validation
 cargo run -- doctor
 cargo run -- install 11.8  # Should show "not implemented"
+cargo run -- download 12.0  # Downloads redistributables (requires network)
 ```
 
 ### Full Test Suite
@@ -90,23 +124,30 @@ cargo test --test cli_integration_test
 Try these commands to verify everything works:
 
 ```bash
-# Valid commands (should show "not implemented" message)
+# Valid commands
 cargo run -- doctor
-cargo run -- install 11.8
-cargo run -- use 12.0 --install
+cargo run -- doctor --verbose
+cargo run -- list
 cargo run -- list --available
+cargo run -- download 12.0           # Download CUDA 12.0 redistributables
+cargo run -- download 11.8 12.6      # Download multiple versions
+cargo run -- download --all          # Download all versions (many files)
+cargo run -- install 11.8            # Should show "not implemented"
+cargo run -- use 12.0 --install
 cargo run -- uninstall 11.8 --yes
 cargo run -- logs --lines 50
 
 # Invalid commands (should show validation errors)
 cargo run -- install ""
 cargo run -- install "bad-version!"
+cargo run -- download                 # Missing version or --all
 cargo run -- logs --lines 0
 ```
 
 **Expected Results:**
 - ✅ Help commands exit with code 0
-- ✅ Valid commands show "not implemented" and exit with code 1
+- ✅ `doctor`, `list`, `download` run successfully (exit 0 when valid)
+- ✅ `install`, `use`, `uninstall`, `logs` show "not implemented" and exit with code 1
 - ✅ Invalid commands show validation errors and exit with code 1
 
 ## 🚧 Development Status

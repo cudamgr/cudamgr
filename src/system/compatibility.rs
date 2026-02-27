@@ -286,6 +286,33 @@ impl CompatibilityRegistry {
         None
     }
 
+    /// List unique CUDA versions available from the registry (newest first).
+    /// Used by `cudamgr list --available`.
+    pub fn available_cuda_versions(&self) -> Vec<String> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for (_driver, cuda) in &self.driver_cuda_map {
+            if seen.insert(cuda.as_str()) {
+                out.push(cuda.clone());
+            }
+        }
+        out
+    }
+
+    /// List available CUDA versions with the minimum driver version required (newest first).
+    /// Used by `cudamgr list --available --verbose`.
+    pub fn available_cuda_versions_with_min_driver(&self) -> Vec<(String, String)> {
+        let mut min_driver: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        for (driver, cuda) in &self.driver_cuda_map {
+            min_driver.insert(cuda.clone(), driver.clone());
+        }
+        self.available_cuda_versions()
+            .into_iter()
+            .filter_map(|cuda| min_driver.get(&cuda).map(|d| (cuda, d.clone())))
+            .collect()
+    }
+
     // ── Built-in defaults ────────────────────────────────────────────
 
     fn default_builtin() -> Self {

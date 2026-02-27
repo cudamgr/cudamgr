@@ -1,10 +1,7 @@
 # cargo-deny configuration
 
 [advisories]
-# Ignore the unmaintained rustls-pemfile advisory as we are delaying the reqwest upgrade
-ignore = [
-    "RUSTSEC-2025-0134",
-]
+# (removed stale RUSTSEC-2025-0134 ignore — no crate in tree matched it)
 
 [licenses]
 # Allow standard open source licenses

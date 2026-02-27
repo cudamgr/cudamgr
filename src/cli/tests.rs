@@ -86,6 +86,11 @@ mod tests {
             available: false,
             verbose: false,
         });
+        let _download_handler = DownloadHandler::new(DownloadArgs {
+            versions: vec!["12.0".to_string()],
+            all: false,
+            output_dir: None,
+        });
         let _uninstall_handler = UninstallHandler::new(UninstallArgs {
             version: "11.8".to_string(),
             yes: false,

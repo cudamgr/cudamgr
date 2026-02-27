@@ -57,7 +57,8 @@ src/
 │
 ├── install/             # Installation management
 │   ├── mod.rs           # Install module exports
-│   ├── downloader.rs    # Package downloading logic
+│   ├── downloader.rs    # Package downloading with progress
+│   ├── redist.rs        # NVIDIA redist manifest & URL resolution
 │   ├── installer.rs     # Platform-specific installation
 │   ├── validator.rs     # Installation validation
 │   └── cleanup.rs       # Cleanup and rollback utilities
@@ -92,7 +93,7 @@ tests/                   # Integration tests
 | `tokio` | 1.0 | Async runtime | `full` for all features |
 | `serde` | 1.0 | Serialization | `derive` for proc macros |
 | `thiserror` | 1.0 | Error handling | Custom error types |
-| `reqwest` | 0.11 | HTTP client | `json` for JSON support |
+| `reqwest` | 0.12 | HTTP client | `json` for JSON support |
 | `tracing` | 0.1 | Structured logging | Core logging framework |
 | `tracing-subscriber` | 0.3 | Log subscriber | `env-filter` for filtering |
 | `chrono` | 0.4 | Date/time handling | `serde` for serialization |
@@ -210,6 +211,7 @@ cargo run -- --version                 # ✅ Should show version
 # Command help
 cargo run -- doctor --help             # ✅ Should show doctor help
 cargo run -- install --help            # ✅ Should show install help
+cargo run -- download --help           # ✅ Should show download help
 cargo run -- use --help                # ✅ Should show use help
 cargo run -- list --help               # ✅ Should show list help
 cargo run -- uninstall --help          # ✅ Should show uninstall help
@@ -218,13 +220,16 @@ cargo run -- logs --help               # ✅ Should show logs help
 
 #### Command Validation
 ```bash
-# Valid commands (should show "not implemented")
-cargo run -- doctor                    # ✅ Exit code 1, "not implemented"
-cargo run -- doctor --verbose          # ✅ Exit code 1, "not implemented"
+# Valid commands
+cargo run -- doctor                    # ✅ Runs system check
+cargo run -- doctor --verbose          # ✅ Verbose report
+cargo run -- list --available          # ✅ Lists installable versions
+cargo run -- download 12.0             # ✅ Downloads CUDA 12.0 redistributables
+cargo run -- download 11.8 12.6        # ✅ Downloads multiple versions
+cargo run -- download --all            # ✅ Downloads all versions (requires network)
 cargo run -- install 11.8              # ✅ Exit code 1, "not implemented"
 cargo run -- install 12.0 --force      # ✅ Exit code 1, "not implemented"
 cargo run -- use 11.8 --install        # ✅ Exit code 1, "not implemented"
-cargo run -- list --available          # ✅ Exit code 1, "not implemented"
 cargo run -- uninstall 11.8 --yes      # ✅ Exit code 1, "not implemented"
 cargo run -- logs --lines 100          # ✅ Exit code 1, "not implemented"
 
@@ -232,6 +237,7 @@ cargo run -- logs --lines 100          # ✅ Exit code 1, "not implemented"
 cargo run -- install                   # ❌ Missing version argument
 cargo run -- install ""                # ❌ Empty version
 cargo run -- install "bad-version!"    # ❌ Invalid version format
+cargo run -- download                  # ❌ Missing version or --all
 cargo run -- use                       # ❌ Missing version argument
 cargo run -- use ""                    # ❌ Empty version
 cargo run -- uninstall                 # ❌ Missing version argument
@@ -311,7 +317,7 @@ RUST_BACKTRACE=full cargo run -- doctor
 ### Phase 1: CLI Framework ✅ **COMPLETED**
 
 **Task 3: Build CLI framework and command structure**
-- ✅ CLI command definitions using clap (doctor, install, use, list, uninstall, logs)
+- ✅ CLI command definitions using clap (doctor, install, use, list, download, uninstall, logs)
 - ✅ Command handler trait and basic routing logic
 - ✅ Formatted output utilities with progress indicators
 - ✅ Interactive prompts and confirmation dialogs
@@ -336,11 +342,15 @@ RUST_BACKTRACE=full cargo run -- doctor
 - Storage space and permission validation
 - Security checks and requirements
 
-### Phase 3: Installation Management ⏳ **PENDING**
+### Phase 3: Installation Management 🚧 **IN PROGRESS**
+
+**Implemented:**
+- ✅ Package downloading with progress (`PackageDownloader::download()`)
+- ✅ NVIDIA redist manifest resolution (`install/redist.rs`) for batch download
+- ✅ `download` command: one or more versions, or `--all`, with optional `-o/--output-dir`
 
 **Planned Tasks:**
-- Package downloading with progress tracking
-- Platform-specific installation logic
+- Platform-specific installation logic (run installer)
 - Installation validation and verification
 - Cleanup and rollback capabilities
 - Dependency management
