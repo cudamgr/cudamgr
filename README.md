@@ -1,7 +1,5 @@
 # CudaMgr
 [![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?style=flat&logo=discord&logoColor=white)](https://discord.gg/Kr7NdB5Qvu)
-[![Star History Chart](https://api.star-history.com/svg?repos=cudamgr/cudamgr&type=date&legend=top-left)](https://www.star-history.com/#cudamgr/cudamgr&type=date&legend=top-left)
-
 A cross-platform CUDA version manager that simplifies installing, managing, and switching between different CUDA toolkit versions.
 
 <img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/0710e86a-e1ff-47ca-a302-db90eb9a3213" />
