@@ -5,8 +5,12 @@ use clap::Subcommand;
 
 use crate::install::downloader::PackageDownloader;
 use crate::install::redist;
+use crate::install::{DefaultInstaller, Installer};
 use crate::system::compatibility::{CompatibilityRegistry, REGISTRY};
 use crate::system::cuda::CudaInstallation;
+use crate::version::registry::VersionRegistry;
+use crate::version::VersionInfo;
+use chrono::Utc;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -468,11 +472,54 @@ impl CommandHandler for InstallHandler {
         tracing::info!("Installing CUDA version: {}", self.args.version);
         OutputFormatter::info(&format!("Installing CUDA version {}", self.args.version));
 
-        // TODO: Implement actual install functionality
-        OutputFormatter::warning("Install command implementation pending");
-        Err(CudaMgrError::Cli(
-            "Install command not yet implemented".to_string(),
-        ))
+        let mut registry = VersionRegistry::load_or_create().await?;
+        let installer = DefaultInstaller;
+        let plan = installer.create_plan(&self.args.version).await?;
+
+        if registry.get_version(&plan.cuda_version).is_some() && !self.args.force {
+            return Err(CudaMgrError::Cli(format!(
+                "CUDA {} is already installed. Use --force to reinstall.",
+                plan.cuda_version
+            )));
+        }
+        let num_artifacts = plan.download_urls.len();
+        OutputFormatter::info(&format!(
+            "Install plan: {} -> {} ({} redist artifacts to download)",
+            plan.cuda_version,
+            plan.install_path.display(),
+            num_artifacts
+        ));
+        if num_artifacts == 0 {
+            return Err(CudaMgrError::Cli(
+                "No redistributable artifacts found for this version (check network or try another version, e.g. 12.0)".to_string(),
+            ));
+        }
+
+        installer.execute_plan(&plan).await?;
+
+        // Register the version so list/use can see it
+        let version_info = VersionInfo {
+            version: plan.cuda_version.clone(),
+            install_path: plan.install_path.clone(),
+            is_active: false,
+            install_date: Utc::now(),
+            size_bytes: 0,
+        };
+        if registry.get_version(&plan.cuda_version).is_some() {
+            registry.remove_version(&plan.cuda_version)?;
+        }
+        registry.add_version(version_info);
+        registry.save().await?;
+
+        OutputFormatter::success(&format!(
+            "CUDA {} installed successfully at {}",
+            plan.cuda_version,
+            plan.install_path.display()
+        ));
+        println!();
+        println!("  To use nvcc in your terminal, run:  cudamgr use {}", self.args.version);
+        println!("  Then add the shown PATH to your environment (or run the command it prints).");
+        Ok(())
     }
 }
 
@@ -490,13 +537,76 @@ impl UseHandler {
 impl CommandHandler for UseHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
         tracing::info!("Switching to CUDA version: {}", self.args.version);
-        OutputFormatter::info(&format!("Switching to CUDA version {}", self.args.version));
+        let mut registry = VersionRegistry::load_or_create().await?;
 
-        // TODO: Implement actual use functionality
-        OutputFormatter::warning("Use command implementation pending");
-        Err(CudaMgrError::Cli(
-            "Use command not yet implemented".to_string(),
-        ))
+        let version_info = registry.find_version(&self.args.version);
+
+        let version_info = match version_info {
+            Some(v) => v.clone(),
+            None => {
+                if self.args.install {
+                    OutputFormatter::info(&format!(
+                        "Version {} not found; installing...",
+                        self.args.version
+                    ));
+                    let installer = DefaultInstaller;
+                    let plan = installer.create_plan(&self.args.version).await?;
+                    installer.execute_plan(&plan).await?;
+                    let info = VersionInfo {
+                        version: plan.cuda_version.clone(),
+                        install_path: plan.install_path.clone(),
+                        is_active: false,
+                        install_date: Utc::now(),
+                        size_bytes: 0,
+                    };
+                    registry.add_version(info.clone());
+                    registry.save().await?;
+                    info
+                } else {
+                    return Err(CudaMgrError::Cli(format!(
+                        "CUDA version '{}' is not installed. Run 'cudamgr install {}' or 'cudamgr use {} --install' first.",
+                        self.args.version, self.args.version, self.args.version
+                    )));
+                }
+            }
+        };
+
+        registry.set_active_version(&version_info.version)?;
+        registry.save().await?;
+
+        let bin_path = version_info.install_path.join("bin");
+        let nvcc_path = bin_path.join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
+        if !nvcc_path.exists() {
+            OutputFormatter::warning(&format!(
+                "nvcc not found at {} — PATH will not work until you reinstall: cudamgr install {} --force",
+                nvcc_path.display(),
+                version_info.version
+            ));
+            println!();
+        }
+        OutputFormatter::success(&format!(
+            "Switched to CUDA {} (active).",
+            version_info.version
+        ));
+        println!();
+        println!("  To use nvcc and other CUDA tools, add this to your PATH:");
+        println!("    {}", bin_path.display());
+        println!();
+        #[cfg(windows)]
+        {
+            println!("  This session only (PowerShell):");
+            println!("    $env:PATH = \"{};\" + $env:PATH", bin_path.display());
+            println!();
+            println!("  Permanently (new terminals) — run in PowerShell:");
+            println!("    [Environment]::SetEnvironmentVariable(\"Path\", [Environment]::GetEnvironmentVariable(\"Path\", \"User\") + \";{}\", \"User\")", bin_path.display());
+        }
+        #[cfg(not(windows))]
+        {
+            println!("  Add to ~/.bashrc or ~/.profile:");
+            println!("    export PATH=\"{}${{PATH:+:$PATH}}\"", bin_path.display());
+        }
+        println!();
+        Ok(())
     }
 }
 
@@ -518,7 +628,8 @@ impl CommandHandler for ListHandler {
         if self.args.available {
             Self::list_available(&self.args.verbose);
         } else {
-            Self::list_installed(&self.args.verbose)?;
+            let registry = VersionRegistry::load_or_create().await?;
+            Self::list_installed(&registry, &self.args.verbose)?;
         }
 
         Ok(())
@@ -552,30 +663,68 @@ impl ListHandler {
             }
         }
 
-        println!("\n  Run 'cudamgr install <version>' to install (when implemented).");
+        println!("\n  Run 'cudamgr install <version>' to install.");
     }
 
-    /// List CUDA versions currently installed on the system.
-    fn list_installed(verbose: &bool) -> CudaMgrResult<()> {
-        let result = CudaInstallation::detect_all_installations()?;
+    /// List CUDA versions currently installed (cudamgr registry + system-detected).
+    fn list_installed(
+        registry: &VersionRegistry,
+        verbose: &bool,
+    ) -> CudaMgrResult<()> {
+        let detected = CudaInstallation::detect_all_installations()?;
 
         OutputFormatter::section("Installed CUDA versions");
 
-        if result.installations.is_empty() {
-            println!("  No CUDA installations found.");
-            if let Some(system) = &result.system_cuda {
-                if let Some(v) = &system.nvcc_version {
-                    println!("  nvcc in PATH: {} (source not under cudamgr)", v);
+        let has_registry = !registry.versions.is_empty();
+        let has_detected = !detected.installations.is_empty();
+
+        if has_registry {
+            if *verbose {
+                println!("  {:<10} {:<12} {:<8} Path (cudamgr)", "Version", "Size", "nvcc");
+                println!("  {}", "─".repeat(60));
+                for v in &registry.versions {
+                    let size_gb = v.size_bytes / (1024 * 1024 * 1024);
+                    let size_str = format!("{} GB", size_gb);
+                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
+                    let nvcc_str = if nvcc_path.exists() { "✓" } else { "no" };
+                    let active = if v.is_active { " (active)" } else { "" };
+                    println!(
+                        "  {:<10} {:<12} {:<8} {}{}",
+                        v.version,
+                        size_str,
+                        nvcc_str,
+                        v.install_path.display(),
+                        active
+                    );
+                }
+            } else {
+                for v in &registry.versions {
+                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
+                    let nvcc_ok = nvcc_path.exists();
+                    let active = if v.is_active {
+                        " (active)"
+                    } else {
+                        ""
+                    };
+                    let nvcc_note = if nvcc_ok { "" } else { " [no nvcc - reinstall with --force]" };
+                    println!("  {}  {}{}{}", v.version, v.install_path.display(), active, nvcc_note);
                 }
             }
-            println!("\n  Run 'cudamgr list --available' to see installable versions.");
-            return Ok(());
+            if has_detected {
+                println!();
+            }
         }
 
-        if *verbose {
-            println!("  {:<10} {:<12} Path", "Version", "Size");
-            println!("  {}", "─".repeat(50));
-            for inst in &result.installations {
+        // Show system-detected installations not already in registry (by path)
+        for inst in &detected.installations {
+            if registry
+                .versions
+                .iter()
+                .any(|v| v.install_path == inst.install_path)
+            {
+                continue;
+            }
+            if *verbose {
                 let size_gb = inst.size_bytes / (1024 * 1024 * 1024);
                 let size_str = format!("{} GB", size_gb);
                 let valid = if inst.is_valid() { "✓" } else { "incomplete" };
@@ -586,10 +735,8 @@ impl ListHandler {
                     inst.install_path.display(),
                     valid
                 );
-            }
-        } else {
-            for inst in &result.installations {
-                let active = if result
+            } else {
+                let active = if detected
                     .system_cuda
                     .as_ref()
                     .is_some_and(|s| s.nvcc_version.as_deref() == Some(inst.version.as_str()))
@@ -598,17 +745,25 @@ impl ListHandler {
                 } else {
                     ""
                 };
-                println!("  {}  {}", inst.version, inst.install_path.display());
-                if !active.is_empty() {
-                    println!("      ^ active in PATH");
-                }
+                println!("  {}  {}{}", inst.version, inst.install_path.display(), active);
             }
         }
 
-        if let Some(system) = &result.system_cuda {
+        if !has_registry && !has_detected {
+            println!("  No CUDA installations found.");
+            if let Some(system) = &detected.system_cuda {
+                if let Some(v) = &system.nvcc_version {
+                    println!("  nvcc in PATH: {} (source not under cudamgr)", v);
+                }
+            }
+            println!("\n  Run 'cudamgr list --available' to see installable versions.");
+        }
+
+        if let Some(system) = &detected.system_cuda {
             if let (Some(nvcc_ver), Some(path)) = (&system.nvcc_version, &system.nvcc_path) {
-                let in_list = result.installations.iter().any(|i| i.version == *nvcc_ver);
-                if !in_list {
+                let in_registry = registry.versions.iter().any(|v| v.version == *nvcc_ver);
+                let in_detected = detected.installations.iter().any(|i| i.version == *nvcc_ver);
+                if !in_registry && !in_detected {
                     println!(
                         "\n  System nvcc in PATH: {} at {}",
                         nvcc_ver,

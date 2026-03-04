@@ -3,9 +3,10 @@
 //! Uses https://developer.download.nvidia.com/compute/cuda/redist/ manifest (redistrib_X.Y.Z.json)
 //! to get direct download URLs for the current platform. "Download in one go" fetches these files.
 
-use crate::error::{CudaMgrResult, InstallError};
+use crate::error::{CudaMgrError, CudaMgrResult, InstallError};
 
-const REDIST_INDEX_URL: &str = "https://developer.download.nvidia.com/compute/cuda/redist/";
+/// Base URL for NVIDIA CUDA redistributable artifacts.
+pub const REDIST_INDEX_URL: &str = "https://developer.download.nvidia.com/compute/cuda/redist/";
 
 #[cfg(target_os = "windows")]
 const PLATFORM_KEY: &str = "windows-x86_64";
@@ -52,11 +53,11 @@ fn resolve_version_to_patch(version: &str) -> Vec<String> {
     candidates
 }
 
-/// Fetch redistrib_X.Y.Z.json and return relative paths for current platform.
-pub async fn get_redist_download_paths(
+/// Fetch manifest JSON for a full version (caller can parse for specific components).
+pub async fn get_redist_manifest(
     full_version: &str,
     client: &reqwest::Client,
-) -> CudaMgrResult<Vec<String>> {
+) -> CudaMgrResult<serde_json::Value> {
     let url = format!("{}redistrib_{}.json", REDIST_INDEX_URL, full_version);
     let body = client
         .get(&url)
@@ -68,10 +69,41 @@ pub async fn get_redist_download_paths(
         .text()
         .await
         .map_err(|e| InstallError::Download(format!("Read manifest: {}", e)))?;
+    serde_json::from_str(&body).map_err(|e| {
+        CudaMgrError::Install(InstallError::Download(format!("Parse manifest: {}", e)))
+    })
+}
 
-    let json: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| InstallError::Download(format!("Parse manifest: {}", e)))?;
+/// Return relative paths for components whose key contains `component_substring` (e.g. "cuda_nvcc").
+pub fn get_component_paths_from_manifest(
+    json: &serde_json::Value,
+    component_substring: &str,
+) -> Vec<String> {
+    let obj = match json.as_object() {
+        Some(o) => o,
+        None => return vec![],
+    };
+    let mut paths = Vec::new();
+    for (key, value) in obj {
+        if !key.contains(component_substring) {
+            continue;
+        }
+        let platform = value.get(PLATFORM_KEY);
+        if let Some(art) = platform.and_then(|p| p.get("relative_path")) {
+            if let Some(s) = art.as_str() {
+                paths.push(s.to_string());
+            }
+        }
+    }
+    paths
+}
 
+/// Fetch redistrib_X.Y.Z.json and return relative paths for current platform.
+pub async fn get_redist_download_paths(
+    full_version: &str,
+    client: &reqwest::Client,
+) -> CudaMgrResult<Vec<String>> {
+    let json = get_redist_manifest(full_version, client).await?;
     Ok(extract_platform_artifacts(&json))
 }
 
