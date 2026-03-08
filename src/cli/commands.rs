@@ -1,8 +1,11 @@
+use crate::cli::interactive::Interactive;
 use crate::cli::output::OutputFormatter;
-use crate::error::{CudaMgrError, CudaMgrResult};
+use crate::error::{CudaMgrError, CudaMgrResult, InstallError, VersionError};
 use async_trait::async_trait;
 use clap::Subcommand;
 
+use crate::config::path::PathManager;
+use crate::config::CudaMgrConfig;
 use crate::install::downloader::PackageDownloader;
 use crate::install::redist;
 use crate::install::{DefaultInstaller, Installer};
@@ -587,29 +590,45 @@ impl CommandHandler for UseHandler {
             ));
             println!();
         }
-        OutputFormatter::success(&format!(
-            "Switched to CUDA {} (active).",
-            version_info.version
-        ));
-        println!();
-        println!("  To use nvcc and other CUDA tools, add this to your PATH:");
-        println!("    {}", bin_path.display());
+
+        // Add to user PATH automatically (Windows: registry; Unix: instructions only)
+        let path_mgr = PathManager::new();
+        match path_mgr.add_cuda_to_path(&bin_path).await {
+            Ok(()) => {
+                OutputFormatter::success(&format!(
+                    "Switched to CUDA {} and added to your user PATH.",
+                    version_info.version
+                ));
+                println!();
+                #[cfg(windows)]
+                println!("  New terminals will use this CUDA. This terminal: run the command below to use it now.");
+                #[cfg(not(windows))]
+                println!("  Add the path below to your shell config (~/.bashrc or ~/.profile).");
+                println!();
+            }
+            Err(e) => {
+                OutputFormatter::warning(&format!(
+                    "Could not update PATH: {}. Add it manually.",
+                    e
+                ));
+                OutputFormatter::success(&format!(
+                    "Switched to CUDA {} (active).",
+                    version_info.version
+                ));
+                println!();
+            }
+        }
+
+        println!("  PATH entry: {}", bin_path.display());
         println!();
         #[cfg(windows)]
         {
-            println!("  This session only (PowerShell):");
+            println!("  This terminal only (PowerShell):");
             println!("    $env:PATH = \"{};\" + $env:PATH", bin_path.display());
-            println!();
-            println!("  Permanently (new terminals) — run in PowerShell:");
-            println!("    [Environment]::SetEnvironmentVariable(\"Path\", [Environment]::GetEnvironmentVariable(\"Path\", \"User\") + \";{}\", \"User\")", bin_path.display());
         }
         #[cfg(not(windows))]
         {
-            println!("  Add to ~/.bashrc or ~/.profile:");
-            println!(
-                "    export PATH=\"{}${{PATH:+:$PATH}}\"",
-                bin_path.display()
-            );
+            println!("  export PATH=\"{}${{PATH:+:$PATH}}\"", bin_path.display());
         }
         println!();
         Ok(())
@@ -910,14 +929,64 @@ impl UninstallHandler {
 #[async_trait]
 impl CommandHandler for UninstallHandler {
     async fn execute(&self) -> CudaMgrResult<()> {
+        self.args.validate()?;
         tracing::info!("Uninstalling CUDA version: {}", self.args.version);
-        OutputFormatter::info(&format!("Uninstalling CUDA version {}", self.args.version));
 
-        // TODO: Implement actual uninstall functionality
-        OutputFormatter::warning("Uninstall command implementation pending");
-        Err(CudaMgrError::Cli(
-            "Uninstall command not yet implemented".to_string(),
-        ))
+        let mut registry = VersionRegistry::load_or_create().await?;
+        let version_info = registry.find_version(&self.args.version).ok_or_else(|| {
+            CudaMgrError::Version(VersionError::NotFound(format!(
+                "CUDA version '{}' is not installed. Run 'cudamgr list' to see installed versions.",
+                self.args.version
+            )))
+        })?;
+
+        let version_str = version_info.version.clone();
+        let install_path = version_info.install_path.clone();
+        let was_active = version_info.is_active;
+        let bin_path = install_path.join("bin");
+
+        if !self.args.yes {
+            let msg = format!(
+                "Uninstall CUDA {} from {}?",
+                version_str,
+                install_path.display()
+            );
+            if !Interactive::confirm(&msg).map_err(CudaMgrError::Io)? {
+                OutputFormatter::info("Uninstall cancelled.");
+                return Ok(());
+            }
+        }
+
+        if was_active {
+            PathManager.remove_cuda_from_path(&bin_path).await?;
+        }
+
+        let config = CudaMgrConfig::load()?;
+        if install_path.starts_with(&config.install_dir) {
+            if install_path.exists() {
+                std::fs::remove_dir_all(&install_path).map_err(|e| {
+                    CudaMgrError::Install(InstallError::Cleanup(format!(
+                        "Failed to remove install directory {}: {}",
+                        install_path.display(),
+                        e
+                    )))
+                })?;
+            }
+        } else {
+            OutputFormatter::warning(&format!(
+                "Install path {} is not under cudamgr install dir; skipping directory removal.",
+                install_path.display()
+            ));
+        }
+
+        registry.remove_version(&version_str)?;
+        registry.save().await?;
+
+        OutputFormatter::success(&format!("Uninstalled CUDA {}.", version_str));
+        if was_active {
+            OutputFormatter::info("CUDA was removed from your PATH. Open a new terminal or run 'cudamgr use <version>' to switch to another version.");
+        }
+        Ok(())
     }
 }
 
