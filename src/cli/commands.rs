@@ -517,7 +517,10 @@ impl CommandHandler for InstallHandler {
             plan.install_path.display()
         ));
         println!();
-        println!("  To use nvcc in your terminal, run:  cudamgr use {}", self.args.version);
+        println!(
+            "  To use nvcc in your terminal, run:  cudamgr use {}",
+            self.args.version
+        );
         println!("  Then add the shown PATH to your environment (or run the command it prints).");
         Ok(())
     }
@@ -603,7 +606,10 @@ impl CommandHandler for UseHandler {
         #[cfg(not(windows))]
         {
             println!("  Add to ~/.bashrc or ~/.profile:");
-            println!("    export PATH=\"{}${{PATH:+:$PATH}}\"", bin_path.display());
+            println!(
+                "    export PATH=\"{}${{PATH:+:$PATH}}\"",
+                bin_path.display()
+            );
         }
         println!();
         Ok(())
@@ -667,10 +673,7 @@ impl ListHandler {
     }
 
     /// List CUDA versions currently installed (cudamgr registry + system-detected).
-    fn list_installed(
-        registry: &VersionRegistry,
-        verbose: &bool,
-    ) -> CudaMgrResult<()> {
+    fn list_installed(registry: &VersionRegistry, verbose: &bool) -> CudaMgrResult<()> {
         let detected = CudaInstallation::detect_all_installations()?;
 
         OutputFormatter::section("Installed CUDA versions");
@@ -680,12 +683,19 @@ impl ListHandler {
 
         if has_registry {
             if *verbose {
-                println!("  {:<10} {:<12} {:<8} Path (cudamgr)", "Version", "Size", "nvcc");
+                println!(
+                    "  {:<10} {:<12} {:<8} Path (cudamgr)",
+                    "Version", "Size", "nvcc"
+                );
                 println!("  {}", "─".repeat(60));
                 for v in &registry.versions {
                     let size_gb = v.size_bytes / (1024 * 1024 * 1024);
                     let size_str = format!("{} GB", size_gb);
-                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
+                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) {
+                        "nvcc.exe"
+                    } else {
+                        "nvcc"
+                    });
                     let nvcc_str = if nvcc_path.exists() { "✓" } else { "no" };
                     let active = if v.is_active { " (active)" } else { "" };
                     println!(
@@ -699,15 +709,25 @@ impl ListHandler {
                 }
             } else {
                 for v in &registry.versions {
-                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) { "nvcc.exe" } else { "nvcc" });
-                    let nvcc_ok = nvcc_path.exists();
-                    let active = if v.is_active {
-                        " (active)"
+                    let nvcc_path = v.install_path.join("bin").join(if cfg!(windows) {
+                        "nvcc.exe"
                     } else {
+                        "nvcc"
+                    });
+                    let nvcc_ok = nvcc_path.exists();
+                    let active = if v.is_active { " (active)" } else { "" };
+                    let nvcc_note = if nvcc_ok {
                         ""
+                    } else {
+                        " [no nvcc - reinstall with --force]"
                     };
-                    let nvcc_note = if nvcc_ok { "" } else { " [no nvcc - reinstall with --force]" };
-                    println!("  {}  {}{}{}", v.version, v.install_path.display(), active, nvcc_note);
+                    println!(
+                        "  {}  {}{}{}",
+                        v.version,
+                        v.install_path.display(),
+                        active,
+                        nvcc_note
+                    );
                 }
             }
             if has_detected {
@@ -745,7 +765,12 @@ impl ListHandler {
                 } else {
                     ""
                 };
-                println!("  {}  {}{}", inst.version, inst.install_path.display(), active);
+                println!(
+                    "  {}  {}{}",
+                    inst.version,
+                    inst.install_path.display(),
+                    active
+                );
             }
         }
 
@@ -762,7 +787,10 @@ impl ListHandler {
         if let Some(system) = &detected.system_cuda {
             if let (Some(nvcc_ver), Some(path)) = (&system.nvcc_version, &system.nvcc_path) {
                 let in_registry = registry.versions.iter().any(|v| v.version == *nvcc_ver);
-                let in_detected = detected.installations.iter().any(|i| i.version == *nvcc_ver);
+                let in_detected = detected
+                    .installations
+                    .iter()
+                    .any(|i| i.version == *nvcc_ver);
                 if !in_registry && !in_detected {
                     println!(
                         "\n  System nvcc in PATH: {} at {}",

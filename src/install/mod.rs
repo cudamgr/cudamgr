@@ -52,10 +52,7 @@ impl Installer for DefaultInstaller {
 
         let install_path = config.install_dir.join(&full_version);
         let base = redist::REDIST_INDEX_URL;
-        let download_urls: Vec<String> = paths
-            .iter()
-            .map(|p| format!("{}{}", base, p))
-            .collect();
+        let download_urls: Vec<String> = paths.iter().map(|p| format!("{}{}", base, p)).collect();
         let download_url = download_urls.first().cloned().unwrap_or_default();
 
         Ok(InstallationPlan {
@@ -85,7 +82,12 @@ impl Installer for DefaultInstaller {
         let downloader = downloader::PackageDownloader::new();
         let cache_dir = CudaMgrConfig::load()
             .map(|c| c.cache_dir)
-            .unwrap_or_else(|_| plan.install_path.join("..").join(".cache").join(&plan.cuda_version));
+            .unwrap_or_else(|_| {
+                plan.install_path
+                    .join("..")
+                    .join(".cache")
+                    .join(&plan.cuda_version)
+            });
         std::fs::create_dir_all(&cache_dir).map_err(|e| {
             CudaMgrError::Install(InstallError::Download(format!(
                 "Failed to create cache dir: {}",
@@ -95,11 +97,7 @@ impl Installer for DefaultInstaller {
 
         let total = plan.download_urls.len();
         for (i, url) in plan.download_urls.iter().enumerate() {
-            let filename = url
-                .rsplit('/')
-                .next()
-                .unwrap_or("archive")
-                .to_string();
+            let filename = url.rsplit('/').next().unwrap_or("archive").to_string();
             let dest_file = cache_dir.join(&filename);
             eprintln!("  [{}/{}] Downloading {} ...", i + 1, total, filename);
             downloader.download(url, &dest_file).await?;
@@ -113,8 +111,7 @@ impl Installer for DefaultInstaller {
             tracing::info!("nvcc not found after install; fetching cuda_nvcc component...");
             let client = reqwest::Client::new();
             if let Ok(manifest) = redist::get_redist_manifest(&plan.cuda_version, &client).await {
-                let nvcc_paths =
-                    redist::get_component_paths_from_manifest(&manifest, "cuda_nvcc");
+                let nvcc_paths = redist::get_component_paths_from_manifest(&manifest, "cuda_nvcc");
                 for rel in nvcc_paths {
                     let url = format!("{}{}", redist::REDIST_INDEX_URL, rel);
                     let filename = url.rsplit('/').next().unwrap_or("nvcc_archive").to_string();
@@ -165,9 +162,7 @@ fn extract_and_merge(archive_path: &Path, target: &Path) -> CudaMgrResult<()> {
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("");
-    let parent = archive_path
-        .parent()
-        .unwrap_or(Path::new("."));
+    let parent = archive_path.parent().unwrap_or(Path::new("."));
     let stem = archive_path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -219,13 +214,11 @@ fn extract_and_merge(archive_path: &Path, target: &Path) -> CudaMgrResult<()> {
     let merge_dest = content_root
         .file_name()
         .and_then(|n| n.to_str())
-        .map(|s| {
-            match s {
-                "bin" => target.join("bin"),
-                "lib" => target.join("lib"),
-                "include" => target.join("include"),
-                _ => target.to_path_buf(),
-            }
+        .map(|s| match s {
+            "bin" => target.join("bin"),
+            "lib" => target.join("lib"),
+            "include" => target.join("include"),
+            _ => target.to_path_buf(),
         })
         .unwrap_or_else(|| target.to_path_buf());
 
@@ -238,9 +231,8 @@ fn extract_zip(zip_path: &Path, dest: &Path) -> CudaMgrResult<()> {
     std::fs::create_dir_all(dest).map_err(|e| {
         CudaMgrError::Install(InstallError::Installation(format!("Create dir: {}", e)))
     })?;
-    let file = std::fs::File::open(zip_path).map_err(|e| {
-        CudaMgrError::Install(InstallError::Download(format!("Open zip: {}", e)))
-    })?;
+    let file = std::fs::File::open(zip_path)
+        .map_err(|e| CudaMgrError::Install(InstallError::Download(format!("Open zip: {}", e))))?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| {
         CudaMgrError::Install(InstallError::Installation(format!("Invalid zip: {}", e)))
     })?;

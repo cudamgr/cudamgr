@@ -56,7 +56,10 @@ impl VersionRegistry {
         };
 
         let file: VersionRegistryFile = serde_json::from_str(&content).map_err(|e| {
-            CudaMgrError::Version(VersionError::Registry(format!("Invalid registry format: {}", e)))
+            CudaMgrError::Version(VersionError::Registry(format!(
+                "Invalid registry format: {}",
+                e
+            )))
         })?;
 
         self.versions = file.versions;
@@ -158,10 +161,9 @@ impl VersionRegistry {
 
     /// Find a version by exact match or prefix (e.g. "12.0" matches "12.0.1")
     pub fn find_version(&self, version: &str) -> Option<&VersionInfo> {
-        self.versions.iter().find(|v| {
-            v.version == version
-                || v.version.starts_with(&format!("{}.", version))
-        })
+        self.versions
+            .iter()
+            .find(|v| v.version == version || v.version.starts_with(&format!("{}.", version)))
     }
 }
 
